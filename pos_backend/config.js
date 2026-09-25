@@ -37,13 +37,15 @@ if (production && process.env.APP_ORIGIN) {
     throw new Error('APP_ORIGIN must be your HTTPS frontend origin, without a path or query.');
   }
 }
-if (
-  production &&
-  (!process.env.DATABASE_URL ||
-    !process.env.SESSION_SECRET ||
-    demo ||
-    !process.env.APP_ORIGIN?.startsWith('https://'))
-)
-  throw new Error(
-    'Production requires DATABASE_URL, SESSION_SECRET, HTTPS APP_ORIGIN, and DEMO_MODE=false.',
-  );
+if (production) {
+  const errors = [];
+  for (const key of ['DATABASE_URL', 'SESSION_SECRET'])
+    if (!process.env[key]?.trim()) errors.push(`${key} is missing`);
+  if (!process.env.APP_ORIGIN?.startsWith('https://'))
+    errors.push('APP_ORIGIN is missing (use your HTTPS frontend origin)');
+  if (process.env.DEMO_MODE !== 'false') errors.push('DEMO_MODE must be false');
+  if (errors.length)
+    throw new Error(
+      `Invalid production configuration: ${errors.join('; ')}. Update the backend environment variables and redeploy.`,
+    );
+}

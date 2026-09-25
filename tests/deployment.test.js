@@ -41,11 +41,28 @@ test('production configuration normalizes the frontend origin and rejects invali
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /APP_ORIGIN must be your HTTPS frontend origin/);
   }
-  for (const invalid of [{ DATABASE_URL: '' }, { SESSION_SECRET: '' }, { DEMO_MODE: 'true' }]) {
+  for (const [invalid, message] of [
+    [{ DATABASE_URL: '' }, 'DATABASE_URL is missing'],
+    [{ DATABASE_URL: '   ' }, 'DATABASE_URL is missing'],
+    [{ SESSION_SECRET: '' }, 'SESSION_SECRET is missing'],
+    [{ SESSION_SECRET: '   ' }, 'SESSION_SECRET is missing'],
+    [{ APP_ORIGIN: '' }, 'APP_ORIGIN is missing'],
+    [{ DEMO_MODE: 'true' }, 'DEMO_MODE must be false'],
+    [{ DEMO_MODE: '' }, 'DEMO_MODE must be false'],
+    [{ DEMO_MODE: 'flase' }, 'DEMO_MODE must be false'],
+  ]) {
     const result = check(invalid);
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Production requires/);
+    assert.ok(result.stderr.includes(message), result.stderr);
+    assert.ok(!result.stderr.includes('deployment-test-secret-not-for-real-use'));
+    assert.ok(!result.stderr.includes('postgresql://unused:unused@localhost/unused'));
   }
+  const missing = check({ DATABASE_URL: '', SESSION_SECRET: '', APP_ORIGIN: '', DEMO_MODE: '' });
+  assert.notEqual(missing.status, 0);
+  assert.match(
+    missing.stderr,
+    /DATABASE_URL is missing; SESSION_SECRET is missing; APP_ORIGIN is missing.*DEMO_MODE must be false/,
+  );
 });
 
 test('HTTPS proxy login retains secure sessions, CSRF protection, and a fresh owner-only store', async () => {
