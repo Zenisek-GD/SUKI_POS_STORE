@@ -1,0 +1,156 @@
+@import '@fontsource/dm-sans/latin-400.css';
+@import '@fontsource/dm-sans/latin-500.css';
+@import '@fontsource/dm-sans/latin-600.css';
+@import '@fontsource/dm-sans/latin-700.css';
+@import '@fontsource/manrope/latin-500.css';
+@import '@fontsource/manrope/latin-600.css';
+@import '@fontsource/manrope/latin-700.css';
+:root {
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  color: #29382f;
+  background: #f6f7f3;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-weight: 400;
+  --green: #245840;
+  --deep: #193f32;
+  --muted: #818a83;
+  --line: #e7ebe4;
+  --cream: #f6f7f3;
+  --lime: #dcecc9;
+  --amber: #b58c3f;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button {
+  color: inherit;
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+h1,
+h2,
+h3 {
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #8cab74;
+  outline-offset: 3px;
+}
+input,
+select,
+textarea {
+  border: 1px solid #dfe5dc;
+  background: #fff;
+  color: #29382f;
+  border-radius: 8px;
+  padding: 11px 13px;
+  max-width: 100%;
+  outline: none;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #709275;
+  box-shadow: 0 0 0 3px #77996a18;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #a0a69e;
+}
+input[type='checkbox'] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--green);
+  padding: 0;
+}
+select {
+  cursor: pointer;
+}
+textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+small {
+  font-size: 12px;
+}
+button {
+  border: 0;
+  background: none;
+}
+::selection {
+  background: #d2e5ba;
+}
+svg {
+  flex-shrink: 0;
+}
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.text-strong {
+  font-weight: 650;
+}
+.text-green {
+  color: #3e7855;
+}
+.text-danger {
+  color: #ba5b54;
+}
+.text-amber {
+  color: #b0873b;
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

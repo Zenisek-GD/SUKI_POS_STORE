@@ -1,0 +1,21 @@
+{
+  "name": "pos-store",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Xianfires backend and React frontend for the POS Store",
+  "scripts": {
+    "backend": "npm --prefix pos_backend run xian",
+    "frontend": "npm --prefix pos_frontend run dev",
+    "build": "npm --prefix pos_frontend run build",
+    "test": "node --test --test-concurrency=1 tests/api.test.js tests/persistence.test.js",
+    "test:e2e": "node tests/browser.mjs",
+    "dev": "node scripts/dev.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "prettier": "^3.6.2",
+    "supertest": "^7.1.4",
+    "xianfires": "2.0.9"
+  }
+}

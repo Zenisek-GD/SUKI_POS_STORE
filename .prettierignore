@@ -1,0 +1,10 @@
+node_modules
+dist
+.data
+test-results
+package-lock.json
+**/package-lock.json
+pos_backend/create.js
+pos_backend/route-cache.js
+pos_backend/bin
+pos_backend/views
