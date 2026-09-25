@@ -10,7 +10,12 @@ export const DEMO_ACCOUNTS = {
 };
 export async function seed(
   db,
-  { demo = false, email = process.env.ADMIN_EMAIL, password = process.env.ADMIN_PASSWORD } = {},
+  {
+    demo = false,
+    email = process.env.ADMIN_EMAIL,
+    password = process.env.ADMIN_PASSWORD,
+    name = process.env.ADMIN_NAME?.trim() || 'Store Owner',
+  } = {},
 ) {
   if (await one(db, 'SELECT id FROM stores LIMIT 1')) return;
   if (!demo && (!email || !password || password.length < 12))
@@ -42,7 +47,7 @@ export async function seed(
               manager: 'Marco Cruz',
               inventory: 'Liza Garcia',
             }[a.role]
-          : 'Store Owner',
+          : name,
         email: a.email.toLowerCase(),
         role: a.role,
       };

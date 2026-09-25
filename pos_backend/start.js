@@ -7,7 +7,7 @@ await migrate(db);
 await seed(db, { demo });
 const app = createApp(db, { demo, production });
 const port = Number(process.env.PORT || 3000),
-  host = process.env.HOST || '127.0.0.1';
+  host = process.env.HOST || (production ? '0.0.0.0' : '127.0.0.1');
 const server = app.listen(port, host, () =>
   console.log(
     `Suki POS · XianFire · ${db.kind}\nAPI: http://${host}:${port}\n${demo ? 'Demo store enabled. Sign in with the accounts shown on the login screen.' : ''}`,

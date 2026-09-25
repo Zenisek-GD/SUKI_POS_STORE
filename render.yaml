@@ -1,0 +1,33 @@
+# Create a PostgreSQL database in Singapore first, then provide its internal URL.
+# Select this file using Render > New > Blueprint. See README.md for setup.
+services:
+  - type: web
+    name: suki-pos-backend
+    runtime: node
+    region: singapore
+    plan: free
+    rootDir: pos_backend
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: '22'
+      - key: HOST
+        value: 0.0.0.0
+      - key: DEMO_MODE
+        value: 'false'
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_ORIGIN
+        sync: false
+      - key: ADMIN_EMAIL
+        value: owner@suki.store
+      - key: ADMIN_NAME
+        value: Gerald
+      - key: ADMIN_PASSWORD
+        sync: false

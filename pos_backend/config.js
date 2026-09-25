@@ -20,6 +20,23 @@ if (!production && !process.env.SESSION_SECRET) {
   process.env.SESSION_SECRET = secret;
 }
 export const demo = process.env.DEMO_MODE === 'true';
+if (production && process.env.APP_ORIGIN) {
+  try {
+    const origin = new URL(process.env.APP_ORIGIN);
+    if (
+      origin.protocol !== 'https:' ||
+      origin.username ||
+      origin.password ||
+      origin.pathname !== '/' ||
+      origin.search ||
+      origin.hash
+    )
+      throw new Error('Invalid origin');
+    process.env.APP_ORIGIN = origin.origin;
+  } catch {
+    throw new Error('APP_ORIGIN must be your HTTPS frontend origin, without a path or query.');
+  }
+}
 if (
   production &&
   (!process.env.DATABASE_URL ||
