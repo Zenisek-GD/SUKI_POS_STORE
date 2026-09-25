@@ -25,7 +25,7 @@ The first development start copies `pos_backend/.env.example` to `.env`, creates
 
 The two services deploy independently from this repository. Vercel forwards `/api/*` to Render using `pos_frontend/vercel.json`; the browser keeps using its frontend origin. This preserves the existing HttpOnly, Secure, SameSite cookies and CSRF checks. API responses are not cached. No `VITE_API_URL` or browser CORS configuration is needed. This uses [Vercel external rewrites](https://vercel.com/docs/rewrites) and its [Vite SPA fallback](https://vercel.com/docs/frameworks/frontend/vite).
 
-The deployment files are templates until you replace `YOUR-RENDER-SERVICE` with the actual Render hostname. Creating cloud projects is a separate step; committing these files alone does not deploy anything until Git integration is connected.
+The frontend API rewrite is configured for `https://suki-pos-store-1.onrender.com`. The frontend production origin is `https://suki-store.vercel.app`; set this as `APP_ORIGIN` on Render. Changes to the rewrite take effect after the frontend is redeployed. The steps below also describe how to set up another deployment.
 
 ### 1. Push the code and create the Vercel frontend
 
@@ -82,14 +82,14 @@ For manual setup, generate a session secret locally with `node -e "console.log(r
 
 Startup creates the schema and initializes **one owner account in a new, empty store**. Sign in with `owner@suki.store` and the `ADMIN_PASSWORD` you chose. Demo credentials, sample products, and your local store data are not copied to this database. Configure the store name and details in Settings and add employees in Team. Existing database records are preserved on subsequent deploys; environment variables do not reset an existing account.
 
-After Render deploys, open `https://YOUR-RENDER-SERVICE.onrender.com/api/health`. It should return JSON with `"status":"ok"`. The bare backend URL does not host the React app in this setup.
+After Render deploys, open `https://suki-pos-store-1.onrender.com/api/health`. It should return JSON with `"status":"ok"`. The bare backend URL does not host the React app in this setup.
 
 ### 4. Connect the frontend to the backend
 
-In `pos_frontend/vercel.json`, replace the first rewrite's destination with your actual Render URL, preserving `/api/:path*`:
+The first rewrite in `pos_frontend/vercel.json` points to the current Render backend. If you create a different backend service, update this destination while preserving `/api/:path*`:
 
 ```json
-"destination": "https://YOUR-ACTUAL-BACKEND.onrender.com/api/:path*"
+"destination": "https://suki-pos-store-1.onrender.com/api/:path*"
 ```
 
 Commit and push that change so Vercel redeploys. The `/api` rewrite must remain before the `/index.html` fallback. Keep `APP_ORIGIN` on Render equal to the Vercel production origin where users sign in. If you change that domain later, update the Render variable and redeploy the backend. Automatic Vercel preview domains are not authorized to write to the production API.
