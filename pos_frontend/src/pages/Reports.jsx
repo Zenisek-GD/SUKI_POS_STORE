@@ -5,9 +5,11 @@ import { useResource } from '../lib/useResource';
 import { cash, dateRange, downloadCSV, titleCase, dateTime } from '../lib/api';
 import { PageHeader, Button, Table, Loading, ErrorState } from '../components/ui';
 import { Metric, SalesChart, CategoryChart } from './Dashboard';
+import SalesOverview from '../components/SalesOverview';
 const reports = [
   ['daily', 'Daily sales'],
   ['transactions', 'Sales transactions'],
+  ['returns', 'Customer returns'],
   ['products', 'Product sales'],
   ['categories', 'Category sales'],
   ['inventory', 'Inventory'],
@@ -34,6 +36,9 @@ const moneyFields = [
   'cost_price',
   'price',
   'value',
+  'refunds',
+  'collected_sales',
+  'cost_total',
 ];
 function reportRows(report, type) {
   if (type === 'low') return report.inventory.filter((p) => p.stock <= p.min_stock);
@@ -44,6 +49,7 @@ function reportRows(report, type) {
         discounts: report.summary.discounts,
         tax: report.summary.tax,
         sales: report.summary.sales,
+        refunds: report.summary.refunds,
         cost: report.summary.cost,
         expenses: report.summary.expenses,
         profit: report.summary.profit,
@@ -52,7 +58,8 @@ function reportRows(report, type) {
   return report[type] || [];
 }
 const fields = {
-  daily: ['date', 'transactions', 'total'],
+  daily: ['date', 'transactions', 'refunds', 'total'],
+  returns: ['number', 'original_receipt', 'created_at', 'operator', 'reason', 'total', 'tax'],
   transactions: [
     'number',
     'created_at',
@@ -79,7 +86,7 @@ const fields = {
   ],
   purchases: ['number', 'supplier', 'purchase_date', 'total', 'payment_status', 'receiving_status'],
   expenses: ['description', 'category', 'expense_date', 'amount'],
-  profit: ['gross_sales', 'discounts', 'tax', 'sales', 'cost', 'expenses', 'profit'],
+  profit: ['gross_sales', 'discounts', 'refunds', 'tax', 'sales', 'cost', 'expenses', 'profit'],
   cashiers: ['name', 'transactions', 'total'],
   payments: ['name', 'transactions', 'total'],
 };
@@ -95,14 +102,19 @@ export default function Reports() {
     key,
     label:
       {
-        total: type === 'products' || type === 'categories' ? 'Net sales' : 'Total',
+        total:
+          type === 'products' || type === 'categories' || type === 'daily'
+            ? 'Net sales'
+            : type === 'returns'
+              ? 'Refund amount'
+              : 'Total',
         cost: 'Cost of goods',
         profit: 'Estimated profit',
         value: 'Stock value',
         min_stock: 'Minimum stock',
         user_name: 'Team member',
         price: 'Selling price',
-        sales: 'Sales collected',
+        sales: 'Net sales collected',
         gross_sales: 'Gross sales',
       }[key] || titleCase(key),
     render: (r) =>
@@ -136,6 +148,7 @@ export default function Reports() {
           Export CSV
         </Button>
       </PageHeader>
+      <SalesOverview />
       <form
         className="report-filters"
         onSubmit={(e) => {
@@ -199,16 +212,16 @@ export default function Reports() {
           <>
             <div className="metrics-grid">
               <Metric
-                label="Sales collected"
+                label="Net sales collected"
                 value={cash(report.summary.sales, data.settings.currency)}
-                detail={`${report.summary.transactions} completed transactions`}
+                detail={`${report.summary.transactions} sales · ${cash(report.summary.refunds, data.settings.currency)} refunded`}
                 icon={ShoppingBag}
                 tone="featured"
               />
               <Metric
                 label="Gross sales"
                 value={cash(report.summary.gross_sales, data.settings.currency)}
-                detail="Before discounts and added tax"
+                detail="Recorded item prices before discounts"
                 icon={ReceiptText}
               />
               <Metric
@@ -220,7 +233,7 @@ export default function Reports() {
               <Metric
                 label="Estimated profit"
                 value={cash(report.summary.profit, data.settings.currency)}
-                detail="Sales less tax, cost, and expenses"
+                detail="After refunds, tax, cost, and expenses"
                 icon={TrendingUp}
               />
             </div>
@@ -240,7 +253,7 @@ export default function Reports() {
                 <div className="panel-header">
                   <div>
                     <h2>Payment mix</h2>
-                    <p>How your customers pay.</p>
+                    <p>Payments less refunds processed during this period.</p>
                   </div>
                 </div>
                 <div className="payment-bars">
@@ -260,7 +273,17 @@ export default function Reports() {
                       <div className="bar-track">
                         <span
                           style={{
-                            width: `${report.summary.sales ? (Number(p.total) / report.summary.sales) * 100 : 0}%`,
+                            width: `${
+                              (Math.max(0, Number(p.total)) /
+                                Math.max(
+                                  1,
+                                  report.payments.reduce(
+                                    (sum, item) => sum + Math.max(0, Number(item.total)),
+                                    0,
+                                  ),
+                                )) *
+                              100
+                            }%`,
                           }}
                         />
                       </div>
@@ -281,10 +304,12 @@ export default function Reports() {
                     {['inventory', 'low'].includes(type)
                       ? 'Current stock snapshot. These quantities are not limited by the date range.'
                       : type === 'profit'
-                        ? 'Estimated profit excludes collected tax. Purchase costs are recognized when products are sold.'
+                        ? 'Profit excludes collected tax and refunds processed in this period. Sellable returns reverse their original cost; damaged returns remain a cost.'
                         : type === 'products' || type === 'categories'
-                          ? 'Net sales are after discounts and exclude tax; allocation is rounded to minor units.'
-                          : 'Completed sales only. Cancelled transactions are excluded from financial totals.'}
+                          ? 'Net sales are after discounts and refunds and exclude tax; refunds follow their processing date. Quantities are sales less returns in this period.'
+                          : type === 'transactions'
+                            ? 'Original completed transactions. Linked refunds are listed separately under Customer returns and deducted from financial totals.'
+                            : 'Completed sales less refunds processed in this period, using the store timezone. Voided transactions are excluded.'}
                   </p>
                 </div>
                 <select

@@ -100,7 +100,7 @@ export const schemas = {
   }),
   movement: z.object({
     product_id: uuid,
-    type: z.enum(['stock_in', 'stock_out', 'adjustment', 'damaged', 'return']),
+    type: z.enum(['stock_in', 'stock_out', 'adjustment', 'damaged']),
     quantity,
     direction: z.enum(['add', 'remove']).default('add'),
     reason: text.min(3),
@@ -118,6 +118,42 @@ export const schemas = {
     notes: optional,
     idempotency_key: uuid,
   }),
+  return: z.object({
+    items: z
+      .array(z.object({ sale_item_id: uuid, quantity, condition: text.min(1) }))
+      .min(1)
+      .max(200)
+      .refine(
+        (items) => new Set(items.map((item) => item.sale_item_id)).size === items.length,
+        'Select each purchased item only once',
+      ),
+    reason: text.min(3, 'Enter a return reason of at least 3 characters'),
+    idempotency_key: uuid,
+  }),
+  ledger: z
+    .object({
+      from: date.optional(),
+      to: date.optional(),
+      type: z
+        .enum([
+          'opening',
+          'sale',
+          'stock_in',
+          'stock_out',
+          'adjustment',
+          'damaged',
+          'return',
+          'purchase',
+          'cancellation',
+        ])
+        .optional(),
+      page: z.coerce.number().int().min(1).max(1000000).default(1),
+      page_size: z.coerce.number().int().min(1).max(100).default(20),
+    })
+    .refine(
+      (value) => !value.from || !value.to || value.from <= value.to,
+      'Start date must be before end date',
+    ),
   purchase: z.object({
     supplier_id: uuid,
     items: z
@@ -148,6 +184,27 @@ export const schemas = {
     low_stock_threshold: z.number().int().min(0).max(100000),
     cashier_discount_limit: z.number().min(0).max(100),
     loyalty_enabled: z.boolean(),
+    return_conditions: z
+      .array(
+        z.object({
+          code: z.string().regex(/^[a-z][a-z0-9_]{0,39}$/),
+          label: text.min(1),
+          sellable: z.boolean(),
+          enabled: z.boolean(),
+        }),
+      )
+      .min(1)
+      .max(20)
+      .refine(
+        (items) => new Set(items.map((item) => item.code)).size === items.length,
+        'Condition codes must be unique',
+      )
+      .refine(
+        (items) =>
+          items.every((item) => !['damaged', 'defective'].includes(item.code) || !item.sellable),
+        'Damaged and defective returns must remain non-sellable',
+      )
+      .optional(),
     timezone: z.string().refine((s) => {
       try {
         new Intl.DateTimeFormat('en', { timeZone: s });

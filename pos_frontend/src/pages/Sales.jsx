@@ -1,23 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, ReceiptText, Ban, ShoppingBag, TrendingUp } from 'lucide-react';
+import { Download, ReceiptText, Undo2, ShoppingBag, TrendingUp } from 'lucide-react';
 import { useStore } from '../lib/storeContext';
 import { useResource } from '../lib/useResource';
 import { api, cash, dateTime, localDate, downloadCSV } from '../lib/api';
-import {
-  PageHeader,
-  Button,
-  SearchBox,
-  Table,
-  Badge,
-  Loading,
-  ErrorState,
-  Confirm,
-} from '../components/ui';
+import { PageHeader, Button, SearchBox, Table, Badge, Loading, ErrorState } from '../components/ui';
 import { Metric } from './Dashboard';
 import Receipt from '../components/Receipt';
+import ReturnSale, { ReturnLookup } from '../components/ReturnSale';
 export default function Sales() {
-  const { data, user, refresh, notify } = useStore(),
+  const { data, user, notify } = useStore(),
     resource = useResource('/sales'),
     [params, setParams] = useSearchParams(),
     [search, setSearch] = useState(''),
@@ -25,7 +17,8 @@ export default function Sales() {
     [status, setStatus] = useState('all'),
     [date, setDate] = useState(''),
     [receipt, setReceipt] = useState(null),
-    [cancel, setCancel] = useState(null),
+    [returnSale, setReturnSale] = useState(null),
+    [lookup, setLookup] = useState(false),
     [opening, setOpening] = useState(false);
   const m = (v) => cash(v, data.settings.currency);
   const show = useCallback(
@@ -69,7 +62,17 @@ export default function Sales() {
       (!date || localDate(s.created_at, data.settings.timezone) === date),
   );
   const completed = rows.filter((s) => s.status === 'completed'),
-    revenue = completed.reduce((sum, s) => sum + s.total, 0);
+    revenue = completed.reduce((sum, s) => sum + s.total - Number(s.refund_total || 0), 0);
+  const openReturn = async (id) => {
+    setOpening(true);
+    try {
+      setReturnSale(await api(`/sales/${id}`));
+    } catch (e) {
+      notify(e.message, 'error');
+    } finally {
+      setOpening(false);
+    }
+  };
   return (
     <>
       <PageHeader
@@ -81,6 +84,10 @@ export default function Sales() {
             : 'A clear record of every sale in your store.'
         }
       >
+        <Button onClick={() => setLookup(true)}>
+          <Undo2 size={17} />
+          Find sale for return
+        </Button>
         <Button
           variant="secondary"
           disabled={!rows.length}
@@ -94,6 +101,7 @@ export default function Sales() {
                 customer: s.customer || 'Walk-in',
                 payment: s.payment_method,
                 amount: (s.total / 100).toFixed(2),
+                refunds: (Number(s.refund_total || 0) / 100).toFixed(2),
                 status: s.status,
               })),
             )
@@ -107,7 +115,7 @@ export default function Sales() {
         <Metric
           label="Sales in this view"
           value={m(revenue)}
-          detail="Completed transactions only"
+          detail="Completed sales less their linked returns"
           icon={ShoppingBag}
         />
         <Metric
@@ -200,7 +208,12 @@ export default function Sales() {
                 label: 'Payment',
                 render: (s) => <span className="payment-label">{s.payment_method}</span>,
               },
-              { key: 'total', label: 'Total', render: (s) => <strong>{m(s.total)}</strong> },
+              {
+                key: 'total',
+                label: 'Original total',
+                render: (s) => <strong>{m(s.total)}</strong>,
+              },
+              { key: 'refund_total', label: 'Refunds', render: (s) => m(s.refund_total || 0) },
               {
                 key: 'status',
                 label: 'Status',
@@ -222,9 +235,14 @@ export default function Sales() {
                     >
                       <ReceiptText size={17} />
                     </button>
-                    {user.role !== 'cashier' && s.status === 'completed' && (
-                      <button aria-label={`Cancel ${s.number}`} onClick={() => setCancel(s)}>
-                        <Ban size={17} />
+                    {s.status === 'completed' && (
+                      <button
+                        title="Return products"
+                        aria-label={`Return ${s.number}`}
+                        disabled={opening}
+                        onClick={() => openReturn(s.id)}
+                      >
+                        <Undo2 size={17} />
                       </button>
                     )}
                   </div>
@@ -235,24 +253,25 @@ export default function Sales() {
         )}
       </section>
       <p className="page-note">
-        Showing up to 1,000 recent transactions. Reports export all completed sales within the
-        selected date range.
+        Showing up to 1,000 recent transactions. Find sale for return searches by receipt beyond
+        this list. Void items before checkout in Point of sale; completed sales use linked returns.
+        Reports attribute refunds to the date processed.
       </p>
       {receipt && <Receipt sale={receipt} onClose={() => setReceipt(null)} />}{' '}
-      {cancel && (
-        <Confirm
-          title="Cancel this transaction?"
-          description={`${cancel.number} · ${m(cancel.total)}. All items will return to stock and the sale will be excluded from reports. Return the customer's payment separately before confirming.`}
-          action="Cancel transaction"
-          danger
-          reason
-          onClose={() => setCancel(null)}
-          onConfirm={async (reason) => {
-            await api(`/sales/${cancel.id}/cancel`, { method: 'POST', body: { reason } });
-            await refresh();
-            resource.reload();
-            notify('Sale cancelled and stock restored');
+      {lookup && (
+        <ReturnLookup
+          onClose={() => setLookup(false)}
+          onFound={(sale) => {
+            setLookup(false);
+            setReturnSale(sale);
           }}
+        />
+      )}
+      {returnSale && (
+        <ReturnSale
+          sale={returnSale}
+          onClose={() => setReturnSale(null)}
+          onSaved={() => resource.reload()}
         />
       )}
     </>

@@ -1,0 +1,137 @@
+.sales-calendar {
+  position: relative;
+  margin: 24px 0;
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+}
+/* Allow grid panels to shrink to the viewport; tables scroll inside their panel. */
+.dashboard-charts > .panel,
+.dashboard-bottom > .panel {
+  min-width: 0;
+}
+.overview-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px 16px;
+}
+.overview-navigation nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #6e786f;
+  font-size: 13px;
+}
+.overview-navigation nav button {
+  color: #376e51;
+  padding: 5px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+}
+.overview-navigation [aria-current='page'] {
+  color: #273c2e;
+  font-weight: 700;
+}
+.overview-period {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #376e51;
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+.overview-period:hover,
+.overview-navigation nav button:hover {
+  text-decoration: underline;
+}
+.overview-change {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.overview-change.increase {
+  color: #26744e;
+}
+.overview-change.decrease {
+  color: #b33636;
+}
+.overview-change.unchanged,
+.overview-change.unavailable {
+  color: #687268;
+}
+.overview-progress {
+  display: block;
+  color: #8a6524;
+  white-space: nowrap;
+  margin-top: 4px;
+  font-size: 11px;
+}
+.overview-coverage {
+  font-size: 12px;
+}
+.overview-coverage.partial {
+  color: #8a6524;
+}
+.overview-reason {
+  display: block;
+  color: #737b73;
+  max-width: 210px;
+  min-width: 140px;
+  white-space: normal;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+.overview-comparison {
+  display: block;
+  color: #7b837a;
+  font-size: 11px;
+  margin-top: 5px;
+}
+.overview-unavailable {
+  color: #858d83;
+}
+.overview-notes {
+  padding: 16px 24px;
+  border-top: 1px solid #e7ebe7;
+  background: #f9faf7;
+}
+.overview-notes p {
+  color: #6a7468;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 4px 0;
+}
+.overview-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 640px) {
+  .overview-navigation,
+  .overview-notes {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .sales-calendar .panel-header {
+    align-items: flex-start;
+    gap: 10px;
+  }
+}

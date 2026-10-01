@@ -28,12 +28,16 @@ export async function seed(
   );
   await db.transaction(async (tx) => {
     const store = id();
-    await tx.query('INSERT INTO stores(id,name,address,contact) VALUES($1,$2,$3,$4)', [
-      store,
-      demo ? 'Suki Neighborhood Store' : 'My Store',
-      demo ? '123 Mabini Street, Calapan City, Oriental Mindoro' : '',
-      demo ? '+63 917 123 4567' : '',
-    ]);
+    await tx.query(
+      'INSERT INTO stores(id,name,address,contact,created_at) VALUES($1,$2,$3,$4,$5)',
+      [
+        store,
+        demo ? 'Suki Neighborhood Store' : 'My Store',
+        demo ? '123 Mabini Street, Calapan City, Oriental Mindoro' : '',
+        demo ? '+63 917 123 4567' : '',
+        new Date(Date.now() - (demo ? 32 * 86400000 : 0)),
+      ],
+    );
     await tx.query('INSERT INTO store_settings(store_id) VALUES($1)', [store]);
     const users = [];
     for (const a of hashes) {
@@ -184,7 +188,7 @@ export async function seed(
             notes: 'Sample transaction',
             idempotency_key: id(),
           },
-          new Date(Date.now() - day * 86400000 - j * 1000),
+          new Date(Date.now() - day * 86400000 - (5 - j) * 1000),
         );
       }
     for (const [description, category, amount, days] of [

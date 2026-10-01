@@ -75,6 +75,17 @@ export function ReceiptContent({ sale }) {
         )}
       </div>
       {sale.status === 'cancelled' && <p>Cancellation: {sale.cancel_reason}</p>}
+      {!!sale.returns?.length && (
+        <section className="receipt-return-summary">
+          <strong>Linked returns</strong>
+          <p>Original sale totals above are preserved.</p>
+          {sale.returns.map((record) => (
+            <p key={record.id}>
+              {record.number} · {dateTime(record.created_at, s.timezone)} · Refund {m(record.total)}
+            </p>
+          ))}
+        </section>
+      )}
       <footer>
         <p>{s.receipt_footer}</p>
         <small>Powered by Suki POS</small>

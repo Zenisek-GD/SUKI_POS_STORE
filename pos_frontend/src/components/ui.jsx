@@ -109,8 +109,9 @@ export function ProductAvatar({ product, size = '' }) {
     </span>
   );
 }
-export function Modal({ title, subtitle, children, onClose, wide = false }) {
+export function Modal({ title, subtitle, children, onClose, wide = false, className = '' }) {
   const dialog = useRef(null);
+  const titleId = useId();
   useEffect(() => {
     const old = document.activeElement,
       node = dialog.current;
@@ -122,7 +123,8 @@ export function Modal({ title, subtitle, children, onClose, wide = false }) {
   }, []);
   return (
     <dialog
-      className={`modal ${wide ? 'wide' : ''}`}
+      className={`modal ${wide ? 'wide' : ''} ${className}`}
+      aria-labelledby={titleId}
       ref={dialog}
       onCancel={(e) => {
         e.preventDefault();
@@ -143,7 +145,7 @@ export function Modal({ title, subtitle, children, onClose, wide = false }) {
     >
       <header>
         <div>
-          <h2>{title}</h2>
+          <h2 id={titleId}>{title}</h2>
           {subtitle && <p>{subtitle}</p>}
         </div>
         <button className="icon-button" aria-label="Close dialog" onClick={onClose}>
@@ -216,6 +218,7 @@ export function Table({
   emptyText = 'No records match your filters.',
   pageSize = 10,
   onRowClick,
+  pagination = true,
 }) {
   const [page, setPage] = useState(1),
     pages = Math.max(1, Math.ceil(rows.length / pageSize)),
@@ -235,11 +238,22 @@ export function Table({
             </tr>
           </thead>
           <tbody>
-            {rows.slice(start, start + pageSize).map((row, i) => (
+            {(pagination ? rows.slice(start, start + pageSize) : rows).map((row, i) => (
               <tr
                 key={row.id || i}
                 onClick={() => onRowClick?.(row)}
                 className={onRowClick ? 'clickable' : ''}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={(event) => {
+                  if (
+                    onRowClick &&
+                    event.target === event.currentTarget &&
+                    ['Enter', ' '].includes(event.key)
+                  ) {
+                    event.preventDefault();
+                    onRowClick(row);
+                  }
+                }}
               >
                 {columns.map((c) => (
                   <td key={c.key} className={c.className}>
@@ -252,32 +266,34 @@ export function Table({
         </table>
       </div>
       {!rows.length && <Empty title="No records found" text={emptyText} />}
-      <div className="table-footer">
-        <span>
-          {rows.length
-            ? `${start + 1}–${Math.min(start + pageSize, rows.length)} of ${rows.length}`
-            : '0 records'}
-        </span>
-        <div>
-          <button
-            aria-label="Previous page"
-            disabled={current === 1}
-            onClick={() => setPage(current - 1)}
-          >
-            <ChevronLeft size={16} />
-          </button>
+      {pagination && (
+        <div className="table-footer">
           <span>
-            Page {current} of {pages}
+            {rows.length
+              ? `${start + 1}–${Math.min(start + pageSize, rows.length)} of ${rows.length}`
+              : '0 records'}
           </span>
-          <button
-            aria-label="Next page"
-            disabled={current === pages}
-            onClick={() => setPage(current + 1)}
-          >
-            <ChevronRight size={16} />
-          </button>
+          <div>
+            <button
+              aria-label="Previous page"
+              disabled={current === 1}
+              onClick={() => setPage(current - 1)}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span>
+              Page {current} of {pages}
+            </span>
+            <button
+              aria-label="Next page"
+              disabled={current === pages}
+              onClick={() => setPage(current + 1)}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

@@ -17,13 +17,16 @@ import {
   Loading,
 } from '../components/ui';
 import { Metric } from './Dashboard';
+import InventoryHistory from '../components/InventoryHistory';
+import { movementLabels } from '../lib/inventory';
 export default function Inventory() {
   const { data, refresh, notify } = useStore(),
     [params] = useSearchParams(),
     [search, setSearch] = useState(''),
     [status, setStatus] = useState(params.get('status') || 'all'),
     [tab, setTab] = useState('stock'),
-    [adjust, setAdjust] = useState(null);
+    [adjust, setAdjust] = useState(null),
+    [history, setHistory] = useState(null);
   const movements = useResource('/inventory/movements'),
     products = data.products.filter((p) => p.active),
     threshold = (p) => p.min_stock ?? data.settings.low_stock_threshold;
@@ -31,7 +34,9 @@ export default function Inventory() {
     out = products.filter((p) => !p.stock).length;
   const filtered = products.filter(
     (p) =>
-      [p.name, p.sku].some((v) => v.toLowerCase().includes(search.toLowerCase())) &&
+      [p.name, p.sku, p.barcode, p.product_code].some((v) =>
+        v?.toLowerCase().includes(search.toLowerCase()),
+      ) &&
       (status === 'all' || (status === 'low' ? p.stock <= threshold(p) : p.stock === 0)),
   );
   const moveRows = (movements.data || []).filter((m) =>
@@ -128,6 +133,7 @@ export default function Inventory() {
         {tab === 'stock' ? (
           <Table
             rows={filtered}
+            onRowClick={setHistory}
             columns={[
               {
                 key: 'name',
@@ -152,6 +158,11 @@ export default function Inventory() {
                 ),
               },
               { key: 'minimum', label: 'Minimum level', render: (p) => threshold(p) },
+              {
+                key: 'non_sellable_stock',
+                label: 'Non-sellable',
+                render: (p) => p.non_sellable_stock || 0,
+              },
               { key: 'supplier', label: 'Supplier' },
               {
                 key: 'status',
@@ -166,7 +177,13 @@ export default function Inventory() {
                 key: 'actions',
                 label: '',
                 render: (p) => (
-                  <button className="text-link" onClick={() => setAdjust(p)}>
+                  <button
+                    className="text-link"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setAdjust(p);
+                    }}
+                  >
                     Adjust
                     <Plus size={14} />
                   </button>
@@ -186,7 +203,11 @@ export default function Inventory() {
               {
                 key: 'type',
                 label: 'Type',
-                render: (m) => <span className="category-chip">{titleCase(m.type)}</span>,
+                render: (m) => (
+                  <span className="category-chip">
+                    {movementLabels[m.type] || titleCase(m.type)}
+                  </span>
+                ),
               },
               { key: 'previous_quantity', label: 'Before' },
               {
@@ -211,6 +232,11 @@ export default function Inventory() {
           />
         )}
       </section>
+      <p className="page-note">
+        Select a product row to view its stock history. Non-sellable stock is kept separate from
+        available inventory.
+      </p>
+      {history && <InventoryHistory product={history} onClose={() => setHistory(null)} />}
       {adjust && (
         <StockForm
           products={products}
@@ -271,7 +297,7 @@ function StockForm({ products, initial, onClose, onSave }) {
           </Field>
           <Field label="Movement type">
             <select value={type} onChange={(e) => setType(e.target.value)}>
-              {['stock_in', 'stock_out', 'adjustment', 'damaged', 'return'].map((t) => (
+              {['stock_in', 'stock_out', 'adjustment', 'damaged'].map((t) => (
                 <option key={t} value={t}>
                   {titleCase(t)}
                 </option>

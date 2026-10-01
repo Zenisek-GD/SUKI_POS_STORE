@@ -8,8 +8,8 @@
     "backend": "npm --prefix pos_backend run xian",
     "frontend": "npm --prefix pos_frontend run dev",
     "build": "npm --prefix pos_frontend run build",
-    "test": "node --test --test-concurrency=1 tests/api.test.js tests/persistence.test.js tests/deployment.test.js",
-    "test:e2e": "node tests/browser.mjs",
+    "test": "node --test --test-concurrency=1 tests/api.test.js tests/persistence.test.js tests/deployment.test.js tests/returns.test.js tests/overview.test.js tests/checkout.test.js",
+    "test:e2e": "node tests/run-browser.mjs",
     "dev": "node scripts/dev.mjs"
   },
   "devDependencies": {

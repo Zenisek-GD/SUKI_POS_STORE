@@ -1,0 +1,123 @@
+.pos-entry-controls,
+.pos-find-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.pos-entry-controls .field,
+.pos-find-controls .field {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+.pos-entry-controls .field input {
+  max-width: 140px;
+}
+.pos-entry-controls .btn {
+  flex-shrink: 0;
+}
+.pos-entry-help {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #697862;
+  margin: 9px 0 15px;
+}
+.pos-favorites {
+  background: #f3f6ed;
+  padding: 13px;
+  border: 1px solid #e2e9d8;
+  border-radius: 9px;
+}
+.pos-favorites-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.pos-favorites-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 13px;
+}
+.pos-favorites-heading button {
+  font-size: 11px;
+  color: #3d6036;
+  text-decoration: underline;
+}
+.pos-favorites > p {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #697862;
+  line-height: 1.5;
+}
+.pos-favorite-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 11px;
+}
+.pos-favorite-buttons button {
+  padding: 8px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px solid #dce5d3;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 11px;
+  text-align: left;
+}
+.pos-favorite-buttons button:hover {
+  border-color: #66844f;
+}
+.pos-find-controls .search-box {
+  flex: 1;
+  min-width: 0;
+}
+.pos-find-controls .field {
+  max-width: 130px;
+}
+.pos-find-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pos-find-name small,
+.pos-in-order {
+  color: #697862;
+  font-size: 11px;
+}
+.pos-in-order {
+  display: block;
+  margin-top: 5px;
+}
+.pos-favorite-toggle {
+  padding: 9px;
+  color: #718268;
+}
+.pos-favorite-toggle.selected {
+  color: #986c1c;
+}
+.pos-favorite-toggle.selected svg {
+  fill: #f8d687;
+}
+.cart-line-end button:has(span) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+}
+@media (max-width: 590px) {
+  .pos-find-controls {
+    flex-wrap: wrap;
+  }
+  .pos-find-controls .search-box {
+    flex-basis: 100%;
+  }
+  .pos-find-product {
+    padding: 15px;
+  }
+}

@@ -100,7 +100,7 @@ test('checkout ignores client prices, rejects oversell and underpayment without 
   }).expect(422);
   assert.equal((await one(db, 'SELECT stock FROM products WHERE id=$1', [product.id])).stock, 5);
 });
-test('concurrent retried checkout creates one sale; cancellation restores stock exactly once', async () => {
+test('concurrent retried checkout creates one sale; completed sale requires a linked return', async () => {
   const key = randomUUID(),
     body = {
       items: [{ product_id: product.id, quantity: 2 }],
@@ -129,10 +129,15 @@ test('concurrent retried checkout creates one sale; cancellation restores stock 
   );
   await send(admin, 'post', `/api/sales/${a.body.id}/cancel`, {
     reason: 'Customer returned all items',
-  }).expect(200);
+  }).expect(409);
   await send(admin, 'post', `/api/sales/${a.body.id}/cancel`, {
     reason: 'Repeated request',
   }).expect(409);
+  await send(admin, 'post', `/api/sales/${a.body.id}/returns`, {
+    reason: 'Customer returned unopened items',
+    items: [{ sale_item_id: a.body.items[0].id, quantity: 2, condition: 'unused_unopened' }],
+    idempotency_key: randomUUID(),
+  }).expect(201);
   assert.equal((await one(db, 'SELECT stock FROM products WHERE id=$1', [product.id])).stock, 5);
 });
 test('two cashiers competing for the last unit cannot oversell', async () => {
@@ -249,7 +254,7 @@ test('tax, discount, digital payments, receipts, and reports agree', async () =>
     report.summary.sales - report.summary.tax - report.summary.cost - report.summary.expenses,
   );
   assert.equal(
-    report.transactions.reduce((sum, s) => sum + s.total, 0),
+    report.transactions.reduce((sum, s) => sum + s.total, 0) - Number(report.summary.refunds || 0),
     report.summary.sales,
   );
   await send(admin, 'put', '/api/settings', { ...settings, currency: 'USD' }).expect(422);

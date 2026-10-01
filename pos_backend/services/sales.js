@@ -1,6 +1,7 @@
 import { id, reference, assert, audit, totals } from '../utils.js';
 import { one } from '../models/database.js';
 import { moveStock } from './inventory.js';
+import { addReturnDetails } from './returns.js';
 export async function getSale(db, user, saleId) {
   const sale = await one(
     db,
@@ -8,13 +9,14 @@ export async function getSale(db, user, saleId) {
  FROM sales s JOIN users u ON u.id=s.user_id LEFT JOIN customers c ON c.id=s.customer_id JOIN payments p ON p.sale_id=s.id WHERE s.id=$1 AND s.store_id=$2`,
     [saleId, user.store_id],
   );
-  assert(sale && (user.role !== 'cashier' || sale.user_id === user.id), 404, 'Sale not found.');
+  assert(sale, 404, 'Sale not found.');
   sale.items = (
     await db.query('SELECT * FROM sale_items WHERE sale_id=$1 AND store_id=$2 ORDER BY name', [
       saleId,
       user.store_id,
     ])
   ).rows;
+  await addReturnDetails(db, user, sale);
   if (user.role === 'cashier') {
     delete sale.cost_total;
     sale.items.forEach((i) => delete i.cost_price);
@@ -23,8 +25,9 @@ export async function getSale(db, user, saleId) {
 }
 export async function completeSale(db, user, data, at = new Date()) {
   const saleId = await db.transaction(async (tx) => {
-    // A cashier lock makes idempotency keys safe even if a checkout is retried concurrently.
-    await tx.query('SELECT id FROM users WHERE id=$1 AND store_id=$2 FOR UPDATE', [
+    // Serialize checkout retries without blocking foreign-key reads by returns
+    // or stock adjustments from the same operator.
+    await tx.query('SELECT id FROM users WHERE id=$1 AND store_id=$2 FOR NO KEY UPDATE', [
       user.id,
       user.store_id,
     ]);
@@ -170,32 +173,29 @@ export async function completeSale(db, user, data, at = new Date()) {
   });
   return getSale(db, user, saleId);
 }
-export async function cancelSale(db, user, saleId, reason) {
-  await db.transaction(async (tx) => {
-    const sale = await one(tx, 'SELECT * FROM sales WHERE id=$1 AND store_id=$2 FOR UPDATE', [
-      saleId,
-      user.store_id,
-    ]);
-    assert(sale, 404, 'Sale not found.');
-    assert(sale.status === 'completed', 409, 'This sale was already cancelled.');
-    const items = (
-      await tx.query(
-        'SELECT * FROM sale_items WHERE sale_id=$1 AND store_id=$2 ORDER BY product_id',
-        [saleId, user.store_id],
-      )
-    ).rows;
-    for (const i of items)
-      await moveStock(tx, user, i.product_id, i.quantity, 'cancellation', reason, saleId);
-    await tx.query(
-      "UPDATE sales SET status='cancelled',cancel_reason=$1,cancelled_at=now() WHERE id=$2 AND store_id=$3",
-      [reason, saleId, user.store_id],
-    );
-    if (sale.customer_id && sale.loyalty_earned)
-      await tx.query(
-        'UPDATE customers SET loyalty_points=GREATEST(0,loyalty_points-$1) WHERE id=$2 AND store_id=$3',
-        [sale.loyalty_earned, sale.customer_id, user.store_id],
-      );
-    await audit(tx, user, 'sale.cancel', 'sale', saleId, `${sale.number}: ${reason}`);
-  });
-  return getSale(db, user, saleId);
+export async function cancelSale(db, user, saleId) {
+  const sale = await one(db, 'SELECT id FROM sales WHERE id=$1 AND store_id=$2', [
+    saleId,
+    user.store_id,
+  ]);
+  assert(sale, 404, 'Sale not found.');
+  assert(
+    false,
+    409,
+    'Completed sales cannot be voided. Use a linked product return; voiding is only available before checkout.',
+  );
+}
+
+export async function lookupSale(db, user, number) {
+  assert(
+    typeof number === 'string' && number.trim().length > 0 && number.length <= 250,
+    422,
+    'Enter the original receipt or transaction number.',
+  );
+  const sale = await one(db, 'SELECT id FROM sales WHERE store_id=$1 AND lower(number)=lower($2)', [
+    user.store_id,
+    number.trim(),
+  ]);
+  assert(sale, 404, 'No transaction matches this receipt number.');
+  return getSale(db, user, sale.id);
 }

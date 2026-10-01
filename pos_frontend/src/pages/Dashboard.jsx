@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../lib/storeContext';
 import { useResource } from '../lib/useResource';
+import SalesOverview from '../components/SalesOverview';
 import { cash, dateRange, localDate, downloadCSV, dateTime } from '../lib/api';
 import {
   PageHeader,
@@ -50,10 +51,11 @@ export function SalesChart({ daily, from, to, currency }) {
   }
   if (!days.length) return <Empty title="No sales in this period" />;
   const max = Math.max(...days.map((d) => d.total), 10000) * 1.2,
+    min = Math.min(...days.map((d) => d.total), 0) * 1.2,
     w = 640,
     h = 178,
     x = (i) => 50 + (i / Math.max(days.length - 1, 1)) * w,
-    y = (v) => 22 + h - (v / max) * h;
+    y = (v) => 22 + h - ((v - min) / (max - min)) * h;
   let path = `M ${x(0)} ${y(days[0].total)}`;
   for (let i = 1; i < days.length; i++)
     path += ` C ${(x(i - 1) + x(i)) / 2} ${y(days[i - 1].total)} ${(x(i - 1) + x(i)) / 2} ${y(days[i].total)} ${x(i)} ${y(days[i].total)}`;
@@ -80,16 +82,16 @@ export function SalesChart({ daily, from, to, currency }) {
             <line
               x1="50"
               x2="695"
-              y1={y((max * i) / 3)}
-              y2={y((max * i) / 3)}
+              y1={y(min + ((max - min) * i) / 3)}
+              y2={y(min + ((max - min) * i) / 3)}
               stroke="#e7ebe7"
               strokeDasharray="4 5"
             />
-            <text x="0" y={y((max * i) / 3) + 4} fill="#939992" fontSize="10">
+            <text x="0" y={y(min + ((max - min) * i) / 3) + 4} fill="#939992" fontSize="10">
               {new Intl.NumberFormat('en', {
                 notation: 'compact',
                 maximumFractionDigits: 1,
-              }).format((max * i) / 300)}
+              }).format((min + ((max - min) * i) / 3) / 100)}
             </text>
           </g>
         ))}
@@ -126,6 +128,8 @@ export function SalesChart({ daily, from, to, currency }) {
   );
 }
 export function CategoryChart({ rows, currency }) {
+  const hasNegative = rows.some((r) => Number(r.total) < 0);
+  rows = rows.filter((r) => Number(r.total) > 0);
   const sum = rows.reduce((s, r) => s + Number(r.total || 0), 0),
     colors = ['#376e51', '#8fac83', '#bccda2', '#e2c885', '#cf9f83', '#9da7b5'];
   return (
@@ -178,6 +182,12 @@ export function CategoryChart({ rows, currency }) {
           </div>
         ))}
         {!rows.length && <p className="muted">Your category mix appears after your first sale.</p>}
+        {hasNegative && (
+          <p className="muted">
+            Categories with net refunds are excluded from this chart. See the category report for
+            all totals.
+          </p>
+        )}
       </div>
     </>
   );
@@ -239,9 +249,9 @@ export default function Dashboard() {
       ) : (
         <div className="metrics-grid">
           <Metric
-            label="Today's sales"
+            label="Today's net sales"
             value={stats ? m(stats.sales) : '…'}
-            detail="Total completed sales today"
+            detail={stats ? `${m(stats.refunds)} refunded today` : 'After refunds processed today'}
             icon={ShoppingBag}
             tone="featured"
           />
@@ -250,7 +260,7 @@ export default function Dashboard() {
             value={stats?.transactions ?? '…'}
             detail={
               stats?.transactions
-                ? `${m(stats.sales / stats.transactions)} average sale`
+                ? `${m(stats.collected_sales / stats.transactions)} average checkout`
                 : 'Ready for your next customer'
             }
             icon={ReceiptText}
@@ -258,7 +268,7 @@ export default function Dashboard() {
           <Metric
             label="Estimated profit"
             value={stats ? m(stats.profit) : '…'}
-            detail="After cost, tax, and expenses"
+            detail="After refunds, cost, tax, and expenses"
             icon={TrendingUp}
           />
           <Metric
@@ -297,7 +307,7 @@ export default function Dashboard() {
                 <strong>{m(report.data.summary.sales)}</strong>
                 <span>
                   <i />
-                  Sales this period
+                  Net sales after refunds
                 </span>
               </div>
               <SalesChart daily={report.data.daily} {...range} currency={data.settings.currency} />
@@ -330,6 +340,7 @@ export default function Dashboard() {
           )}
         </section>
       </div>
+      <SalesOverview />
       <div className="dashboard-bottom">
         <section className="panel">
           <div className="panel-header">
@@ -400,24 +411,27 @@ export default function Dashboard() {
             </div>
             <span>↗</span>
           </div>
-          {report.data?.products.slice(0, 4).map((p, i) => (
-            <div className="bestseller" key={p.product_id}>
-              <span className="rank">0{i + 1}</span>
-              <ProductAvatar product={p} />
-              <div>
-                <strong>{p.name}</strong>
-                <small>{p.quantity} sold</small>
-                <span className="bestseller-track">
-                  <i
-                    style={{
-                      width: `${(p.quantity / (report.data.products[0]?.quantity || 1)) * 100}%`,
-                    }}
-                  />
-                </span>
+          {report.data?.products
+            .filter((p) => p.quantity > 0)
+            .slice(0, 4)
+            .map((p, i) => (
+              <div className="bestseller" key={p.product_id}>
+                <span className="rank">0{i + 1}</span>
+                <ProductAvatar product={p} />
+                <div>
+                  <strong>{p.name}</strong>
+                  <small>{p.quantity} sold</small>
+                  <span className="bestseller-track">
+                    <i
+                      style={{
+                        width: `${(p.quantity / (report.data.products[0]?.quantity || 1)) * 100}%`,
+                      }}
+                    />
+                  </span>
+                </div>
+                <b>{m(p.total)}</b>
               </div>
-              <b>{m(p.total)}</b>
-            </div>
-          ))}
+            ))}
           {!report.data?.products.length && (
             <Empty title="Favorites in the making" text="Best sellers appear after a sale." />
           )}

@@ -227,11 +227,61 @@ export function storeController(db) {
       res.json(
         (
           await db.query(
-            'SELECT m.*,p.name AS product,p.emoji,u.name AS user_name FROM inventory_transactions m JOIN products p ON p.id=m.product_id JOIN users u ON u.id=m.user_id WHERE m.store_id=$1 AND ($2::uuid IS NULL OR m.product_id=$2) ORDER BY m.created_at DESC LIMIT 1000',
+            'SELECT m.*,p.name AS product,p.emoji,u.name AS user_name FROM inventory_transactions m JOIN products p ON p.id=m.product_id JOIN users u ON u.id=m.user_id WHERE m.store_id=$1 AND ($2::uuid IS NULL OR m.product_id=$2) ORDER BY m.sequence DESC,m.created_at DESC LIMIT 1000',
             [req.user.store_id, product],
           )
         ).rows,
       );
+    },
+    async productMovements(req, res) {
+      const productId = parseId(req.params.id),
+        filters = schemas.ledger.parse(req.query);
+      const product = await one(
+        db,
+        'SELECT id,name,sku,barcode,product_code,stock,non_sellable_stock,unit,emoji FROM products WHERE id=$1 AND store_id=$2',
+        [productId, req.user.store_id],
+      );
+      assert(product, 404, 'Product not found.');
+      const settings = await one(db, 'SELECT timezone FROM store_settings WHERE store_id=$1', [
+        req.user.store_id,
+      ]);
+      const args = [
+        req.user.store_id,
+        productId,
+        filters.from || null,
+        filters.to || null,
+        filters.type || null,
+        settings.timezone,
+      ];
+      const where = `m.store_id=$1 AND m.product_id=$2
+        AND ($3::date IS NULL OR m.created_at >= ($3::date::timestamp AT TIME ZONE $6))
+        AND ($4::date IS NULL OR m.created_at < (($4::date + 1)::timestamp AT TIME ZONE $6))
+        AND ($5::text IS NULL OR m.type=$5)`;
+      const count = await one(
+        db,
+        `SELECT COUNT(*)::int AS total FROM inventory_transactions m WHERE ${where}`,
+        args,
+      );
+      const rows = (
+        await db.query(
+          `SELECT m.*,GREATEST(m.quantity,0) AS quantity_in,GREATEST(-m.quantity,0) AS quantity_out,
+        m.new_quantity AS balance_after,u.name AS user_name,COALESCE(s.number,p.number,r.number,'') AS reference
+        FROM inventory_transactions m JOIN users u ON u.id=m.user_id
+        LEFT JOIN sales s ON s.id=m.reference_id AND s.store_id=m.store_id
+        LEFT JOIN purchases p ON p.id=m.reference_id AND p.store_id=m.store_id
+        LEFT JOIN sales_returns r ON r.id=m.reference_id AND r.store_id=m.store_id
+        WHERE ${where} ORDER BY m.sequence DESC,m.created_at DESC LIMIT $7 OFFSET $8`,
+          [...args, filters.page_size, (filters.page - 1) * filters.page_size],
+        )
+      ).rows;
+      res.json({
+        product,
+        rows,
+        total: count.total,
+        page: filters.page,
+        page_size: filters.page_size,
+        timezone: settings.timezone,
+      });
     },
     async audit(req, res) {
       res.json(
@@ -276,7 +326,7 @@ export function storeController(db) {
       res.json(
         (
           await db.query(
-            `SELECT s.id,s.number,s.user_id,s.customer_id,s.subtotal,s.discount,s.tax,s.total,s.status,s.created_at,u.name AS cashier,c.name AS customer,p.method AS payment_method,(SELECT SUM(quantity)::int FROM sale_items WHERE sale_id=s.id) AS item_count
+            `SELECT s.id,s.number,s.user_id,s.customer_id,s.subtotal,s.discount,s.tax,s.total,s.status,s.created_at,u.name AS cashier,c.name AS customer,p.method AS payment_method,(SELECT SUM(quantity)::int FROM sale_items WHERE sale_id=s.id) AS item_count,(SELECT COALESCE(SUM(total),0)::int FROM sales_returns WHERE sale_id=s.id) AS refund_total
   FROM sales s JOIN users u ON u.id=s.user_id LEFT JOIN customers c ON c.id=s.customer_id JOIN payments p ON p.sale_id=s.id WHERE s.store_id=$1 AND ($2::uuid IS NULL OR s.user_id=$2) AND ($3::uuid IS NULL OR s.customer_id=$3) ORDER BY s.created_at DESC LIMIT 1000`,
             [req.user.store_id, cashier, customer],
           )

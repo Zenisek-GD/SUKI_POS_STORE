@@ -61,3 +61,32 @@ CREATE INDEX IF NOT EXISTS expenses_date_idx ON expenses(store_id,expense_date);
 CREATE TABLE IF NOT EXISTS audit_logs(id uuid PRIMARY KEY,store_id uuid NOT NULL,user_id uuid NOT NULL,action text NOT NULL,entity_type text NOT NULL,entity_id uuid,summary text NOT NULL,details jsonb NOT NULL DEFAULT '{}',created_at timestamptz NOT NULL DEFAULT now(),FOREIGN KEY(store_id,user_id) REFERENCES users(store_id,id));
 CREATE INDEX IF NOT EXISTS audit_date_idx ON audit_logs(store_id,created_at DESC);
 INSERT INTO schema_migrations(version) VALUES(1) ON CONFLICT DO NOTHING;
+
+-- Additive migration: retain every original sale and existing stock movement.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS product_code text GENERATED ALWAYS AS ('P-' || upper(replace(id::text,'-',''))) STORED;
+CREATE UNIQUE INDEX IF NOT EXISTS products_store_code_idx ON products(store_id,product_code);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS non_sellable_stock integer NOT NULL DEFAULT 0 CHECK(non_sellable_stock>=0);
+ALTER TABLE inventory_transactions ADD COLUMN IF NOT EXISTS sequence bigserial;
+CREATE UNIQUE INDEX IF NOT EXISTS inventory_sequence_idx ON inventory_transactions(sequence);
+CREATE INDEX IF NOT EXISTS inventory_product_sequence_idx ON inventory_transactions(store_id,product_id,sequence,created_at);
+ALTER TABLE inventory_transactions ADD COLUMN IF NOT EXISTS non_sellable_quantity integer NOT NULL DEFAULT 0 CHECK(non_sellable_quantity>=0);
+ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS return_conditions jsonb NOT NULL DEFAULT '[{"code":"unused_unopened","label":"Unused, unopened, intact packaging","sellable":true,"enabled":true},{"code":"damaged","label":"Damaged (non-sellable)","sellable":false,"enabled":true},{"code":"defective","label":"Defective (non-sellable)","sellable":false,"enabled":true}]';
+CREATE UNIQUE INDEX IF NOT EXISTS sale_items_store_id_idx ON sale_items(store_id,id);
+CREATE TABLE IF NOT EXISTS sales_returns(
+ id uuid PRIMARY KEY,store_id uuid NOT NULL,sale_id uuid NOT NULL,number text NOT NULL UNIQUE,user_id uuid NOT NULL,
+ reason text NOT NULL,total integer NOT NULL CHECK(total>=0),tax integer NOT NULL CHECK(tax>=0),cost_total integer NOT NULL CHECK(cost_total>=0),
+ idempotency_key uuid NOT NULL,request_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE(store_id,id),UNIQUE(store_id,idempotency_key),
+ FOREIGN KEY(store_id,sale_id) REFERENCES sales(store_id,id),FOREIGN KEY(store_id,user_id) REFERENCES users(store_id,id)
+);
+CREATE INDEX IF NOT EXISTS sales_returns_store_date_idx ON sales_returns(store_id,created_at);
+CREATE INDEX IF NOT EXISTS sales_returns_sale_idx ON sales_returns(store_id,sale_id);
+CREATE TABLE IF NOT EXISTS return_items(
+ id uuid PRIMARY KEY,store_id uuid NOT NULL,return_id uuid NOT NULL,sale_item_id uuid NOT NULL,product_id uuid NOT NULL,
+ quantity integer NOT NULL CHECK(quantity>0),condition text NOT NULL,condition_label text NOT NULL,sellable boolean NOT NULL,
+ refund_amount integer NOT NULL CHECK(refund_amount>=0),tax integer NOT NULL CHECK(tax>=0),cost_total integer NOT NULL CHECK(cost_total>=0),
+ UNIQUE(return_id,sale_item_id),FOREIGN KEY(store_id,return_id) REFERENCES sales_returns(store_id,id),
+ FOREIGN KEY(store_id,sale_item_id) REFERENCES sale_items(store_id,id),FOREIGN KEY(store_id,product_id) REFERENCES products(store_id,id)
+);
+CREATE INDEX IF NOT EXISTS return_items_sale_item_idx ON return_items(store_id,sale_item_id);
+INSERT INTO schema_migrations(version) VALUES(2) ON CONFLICT DO NOTHING;

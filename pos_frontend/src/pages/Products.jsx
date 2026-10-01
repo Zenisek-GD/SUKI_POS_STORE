@@ -68,7 +68,9 @@ export default function Products() {
     (p) =>
       (status === 'all' || p.active === (status === 'active')) &&
       (category === 'all' || p.category_id === category) &&
-      [p.name, p.sku, p.barcode].some((v) => v?.toLowerCase().includes(search.toLowerCase())),
+      [p.name, p.sku, p.product_code, p.barcode].some((v) =>
+        v?.toLowerCase().includes(search.toLowerCase()),
+      ),
   );
   const m = (v) => cash(v, data.settings.currency);
   const columns = [
@@ -85,6 +87,7 @@ export default function Products() {
         </div>
       ),
     },
+    { key: 'product_code', label: 'Product code' },
     {
       key: 'category',
       label: 'Category',
@@ -148,6 +151,7 @@ export default function Products() {
               rows.map((p) => ({
                 name: p.name,
                 sku: p.sku,
+                product_code: p.product_code,
                 barcode: p.barcode,
                 category: p.category,
                 cost_price: (p.cost_price / 100).toFixed(2),
@@ -291,8 +295,8 @@ export default function Products() {
         />
       )}
       <p className="page-note">
-        Stock changes are recorded in Inventory. Product records retain their creation and update
-        dates.
+        Each product receives a unique product code automatically. Enter that code at checkout when
+        no barcode is available. Stock changes are recorded in Inventory.
       </p>
       {edit?.id && <span className="sr-only">Last updated {dateTime(edit.updated_at)}</span>}
     </>

@@ -13,6 +13,7 @@ import { useStore } from '../lib/storeContext';
 import { api } from '../lib/api';
 import { PageHeader, Button, Field, ErrorState, Badge } from '../components/ui';
 import EntityForm from '../components/EntityForm';
+import '../components/storeOperations.css';
 export default function Settings() {
   const { data, refresh, notify } = useStore(),
     [values, setValues] = useState({ ...data.settings }),
@@ -60,6 +61,44 @@ export default function Settings() {
         </Button>
       </PageHeader>
       <form id="settings-form" onSubmit={submit} className="settings-layout">
+        <section className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>Product return policy</h2>
+              <p>Returns are accepted within 24 hours of the original purchase.</p>
+            </div>
+          </div>
+          <div className="modal-body return-condition-settings">
+            <p className="muted">
+              Enable the conditions your store accepts. The operator must inspect the product and
+              enter a reason. Damaged or defective products are recorded as non-sellable stock.
+            </p>
+            {(values.return_conditions || []).map((condition) => (
+              <label key={condition.code}>
+                <input
+                  type="checkbox"
+                  checked={condition.enabled}
+                  onChange={(e) =>
+                    change(
+                      'return_conditions',
+                      values.return_conditions.map((c) =>
+                        c.code === condition.code ? { ...c, enabled: e.target.checked } : c,
+                      ),
+                    )
+                  }
+                />
+                <span>
+                  {condition.label}
+                  <small>
+                    {condition.sellable
+                      ? 'Accepted returns go back to available stock.'
+                      : 'Accepted returns stay separate from available stock.'}
+                  </small>
+                </span>
+              </label>
+            ))}
+          </div>
+        </section>
         <section className="panel">
           <div className="panel-header">
             <div className="settings-section-title">

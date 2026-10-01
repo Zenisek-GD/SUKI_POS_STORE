@@ -13,6 +13,7 @@ import {
   Banknote,
   Smartphone,
   Check,
+  Star,
 } from 'lucide-react';
 import { useStore } from '../lib/storeContext';
 import { api, cash } from '../lib/api';
@@ -25,8 +26,17 @@ import {
   Field,
   ErrorState,
   Confirm,
+  SearchBox,
+  Table,
 } from '../components/ui';
 import Receipt from '../components/Receipt';
+import {
+  cartAfterAdding,
+  findScannedProduct,
+  productMatches,
+  wholeQuantity,
+} from '../lib/checkout';
+import './POS.css';
 export default function POS() {
   const { data, user, refresh, notify } = useStore(),
     [params] = useSearchParams(),
@@ -56,7 +66,20 @@ export default function POS() {
     [discount, setDiscount] = useState(0),
     [checkout, setCheckout] = useState(false),
     [receipt, setReceipt] = useState(null),
-    [clear, setClear] = useState(false);
+    [clear, setClear] = useState(false),
+    [voidItem, setVoidItem] = useState(null),
+    [enteredQuantity, setEnteredQuantity] = useState('1'),
+    [findProduct, setFindProduct] = useState(false),
+    [addError, setAddError] = useState('');
+  const favoriteStorage = `suki-favorites-${user.store_id}-${user.id}`;
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(favoriteStorage) || '[]');
+      return Array.isArray(saved) ? saved.filter((id) => typeof id === 'string') : [];
+    } catch {
+      return [];
+    }
+  });
   const search = useRef(null),
     key = useRef(crypto.randomUUID());
   const s = data.settings,
@@ -66,6 +89,13 @@ export default function POS() {
     sessionStorage.setItem(storage, JSON.stringify(cart));
     key.current = crypto.randomUUID();
   }, [cart, storage, discount, customer]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(favoriteStorage, JSON.stringify(favorites));
+    } catch {
+      // Favorites remain available for this visit if browser storage is unavailable.
+    }
+  }, [favorites, favoriteStorage]);
   useEffect(() => {
     const handle = (e) => {
       if (e.key === 'F2') {
@@ -90,25 +120,29 @@ export default function POS() {
     ),
     total = s.tax_inclusive ? net : net + tax;
   const shown = products.filter(
-    (p) =>
-      (category === 'all' || p.category_id === category) &&
-      [p.name, p.sku, p.barcode].some((v) => v?.toLowerCase().includes(query.toLowerCase())),
+    (p) => (category === 'all' || p.category_id === category) && productMatches(p, query),
   );
   const add = (p) => {
-    const existing = cart.find((i) => i.product_id === p.id);
-    if ((existing?.quantity || 0) >= p.stock) {
-      notify(`Only ${p.stock} ${p.unit} available for ${p.name}.`, 'error');
-      return;
+    try {
+      setCart(cartAfterAdding(cart, p, enteredQuantity));
+      setEnteredQuantity('1');
+      setAddError('');
+      notify(`Added ${Number(enteredQuantity)} ${p.unit} of ${p.name}.`);
+      return true;
+    } catch (error) {
+      setAddError(error.message);
+      notify(error.message, 'error');
+      return false;
     }
-    setCart((c) =>
-      existing
-        ? c.map((i) => (i.product_id === p.id ? { ...i, quantity: i.quantity + 1 } : i))
-        : [...c, { product_id: p.id, quantity: 1 }],
-    );
   };
   const quantity = (pid, value) => {
     const p = products.find((p) => p.id === pid);
-    if (!Number.isInteger(value) || value < 1) return;
+    try {
+      wholeQuantity(value);
+    } catch (error) {
+      notify(error.message, 'error');
+      return;
+    }
     if (!p || value > p.stock) {
       notify('Quantity exceeds available stock.', 'error');
       return;
@@ -118,16 +152,22 @@ export default function POS() {
   const scan = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const exact = products.find((p) =>
-        [p.barcode, p.sku, p.name].some((v) => v?.toLowerCase() === query.toLowerCase()),
-      );
-      const match = exact || (shown.length === 1 ? shown[0] : null);
-      if (match) {
-        add(match);
-        setQuery('');
-      } else notify('Choose a product or scan an exact barcode.', 'error');
+      try {
+        const match = findScannedProduct(products, query);
+        if (!match)
+          throw new Error('Product not found. Check the barcode or code, or use Find Product.');
+        if (add(match)) setQuery('');
+      } catch (error) {
+        setAddError(error.message);
+        notify(error.message, 'error');
+      }
     }
   };
+  const toggleFavorite = (id) =>
+    setFavorites((current) =>
+      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
+    );
+  const favoriteProducts = products.filter((p) => favorites.includes(p.id));
   const ready = items.length > 0 && items.every((i) => i.active && i.quantity <= i.stock);
   const finish = async (sale) => {
     setReceipt(sale);
@@ -152,6 +192,29 @@ export default function POS() {
       </PageHeader>
       <div className="pos-layout">
         <section className="product-picker">
+          <div className="pos-entry-controls">
+            <Field label="Quantity before adding" hint="Applies to the next product.">
+              <input
+                type="number"
+                min="1"
+                max="1000000"
+                step="1"
+                inputMode="numeric"
+                value={enteredQuantity}
+                onChange={(e) => setEnteredQuantity(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    search.current?.focus();
+                  }
+                }}
+              />
+            </Field>
+            <Button variant="secondary" onClick={() => setFindProduct(true)}>
+              <Search size={18} />
+              Find Product
+            </Button>
+          </div>
           <div className="pos-search">
             <Search size={20} />
             <input
@@ -165,6 +228,36 @@ export default function POS() {
             <kbd>F2</kbd>
             <ScanBarcode size={23} />
           </div>
+          <p className="pos-entry-help">
+            Enter a quantity, then scan or enter an exact barcode, SKU, or product code. Press Enter
+            to add.
+          </p>
+          {addError && <ErrorState message={addError} />}
+          <section className="pos-favorites" aria-label="Favorite products">
+            <div className="pos-favorites-heading">
+              <h2>
+                <Star size={15} /> Favorites
+              </h2>
+              <button onClick={() => setFindProduct(true)}>Manage favorites</button>
+            </div>
+            {favoriteProducts.length ? (
+              <div className="pos-favorite-buttons">
+                {favoriteProducts.map((p) => (
+                  <button
+                    key={p.id}
+                    disabled={!p.stock}
+                    onClick={() => add(p)}
+                    aria-label={`Add favorite ${p.name}`}
+                  >
+                    <span>{p.name}</span>
+                    <strong>{m(p.price)}</strong>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p>Star products in Find Product for quick access on this device.</p>
+            )}
+          </section>
           <div className="category-tabs">
             <button
               className={category === 'all' ? 'active' : ''}
@@ -242,7 +335,8 @@ export default function POS() {
               <span>{cart.reduce((sum, i) => sum + i.quantity, 0)}</span>
             </div>
             <button
-              aria-label="Clear order"
+              aria-label="Void current order"
+              title="Void current order before payment"
               className="icon-button"
               disabled={!cart.length}
               onClick={() => setClear(true)}
@@ -281,9 +375,7 @@ export default function POS() {
                       <button
                         aria-label={`Decrease ${i.name}`}
                         onClick={() =>
-                          i.quantity === 1
-                            ? setCart((c) => c.filter((x) => x.product_id !== i.product_id))
-                            : quantity(i.product_id, i.quantity - 1)
+                          i.quantity === 1 ? setVoidItem(i) : quantity(i.product_id, i.quantity - 1)
                         }
                       >
                         <Minus size={13} />
@@ -292,6 +384,7 @@ export default function POS() {
                         aria-label={`Quantity for ${i.name}`}
                         type="number"
                         min="1"
+                        step="1"
                         max={i.stock}
                         value={i.quantity}
                         onChange={(e) => quantity(i.product_id, Number(e.target.value))}
@@ -310,10 +403,12 @@ export default function POS() {
                   <div className="cart-line-end">
                     <strong>{m((i.price || 0) * i.quantity)}</strong>
                     <button
-                      aria-label={`Remove ${i.name}`}
-                      onClick={() => setCart((c) => c.filter((x) => x.product_id !== i.product_id))}
+                      aria-label={`Void ${i.name}`}
+                      title="Void item before payment"
+                      onClick={() => setVoidItem(i)}
                     >
                       <Trash2 size={14} />
+                      <span>Void</span>
                     </button>
                   </div>
                 </div>
@@ -395,14 +490,12 @@ export default function POS() {
           className="mobile-cart-shortcut"
           aria-label="View current order"
           onClick={() =>
-            document
-              .getElementById('current-order')
-              ?.scrollIntoView({
-                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-                  ? 'auto'
-                  : 'smooth',
-                block: 'start',
-              })
+            document.getElementById('current-order')?.scrollIntoView({
+              behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                ? 'auto'
+                : 'smooth',
+              block: 'start',
+            })
           }
         >
           <ShoppingBag size={19} />
@@ -425,6 +518,20 @@ export default function POS() {
           }}
         />
       )}
+      {findProduct && (
+        <FindProduct
+          products={products}
+          cart={cart}
+          currency={s.currency}
+          enteredQuantity={enteredQuantity}
+          setEnteredQuantity={setEnteredQuantity}
+          favorites={favorites}
+          toggleFavorite={toggleFavorite}
+          add={add}
+          error={addError}
+          onClose={() => setFindProduct(false)}
+        />
+      )}
       {receipt && (
         <Receipt
           sale={receipt}
@@ -437,17 +544,140 @@ export default function POS() {
       )}
       {clear && (
         <Confirm
-          title="Clear this order?"
-          description="All items will be removed from the current order."
-          action="Clear order"
+          title="Void this order?"
+          description="Cancel all items before payment. This order has not been completed, so no refund or inventory change is needed."
+          action="Void order"
           onClose={() => setClear(false)}
           onConfirm={() => {
             setCart([]);
             setDiscount(0);
+            setCustomer('');
           }}
         />
       )}
+      {voidItem && (
+        <Confirm
+          title={`Void ${voidItem.name}?`}
+          description={`Remove ${voidItem.quantity} ${voidItem.unit} from the current order before payment.`}
+          action="Void item"
+          onClose={() => setVoidItem(null)}
+          onConfirm={() =>
+            setCart((current) => current.filter((i) => i.product_id !== voidItem.product_id))
+          }
+        />
+      )}
     </>
+  );
+}
+function FindProduct({
+  products,
+  cart,
+  currency,
+  enteredQuantity,
+  setEnteredQuantity,
+  favorites,
+  toggleFavorite,
+  add,
+  error,
+  onClose,
+}) {
+  const [query, setQuery] = useState('');
+  const rows = products.filter((p) => productMatches(p, query));
+  return (
+    <Modal
+      title="Find Product"
+      subtitle="Select products without a scanner. Star your regular items for faster checkout."
+      onClose={onClose}
+      wide
+    >
+      <div className="modal-body pos-find-product">
+        <div className="pos-find-controls">
+          <SearchBox
+            autoFocus
+            value={query}
+            onChange={setQuery}
+            placeholder="Search name, SKU, product code, or barcode"
+          />
+          <Field label="Quantity to add">
+            <input
+              type="number"
+              min="1"
+              max="1000000"
+              step="1"
+              inputMode="numeric"
+              value={enteredQuantity}
+              onChange={(e) => setEnteredQuantity(e.target.value)}
+            />
+          </Field>
+        </div>
+        {error && <ErrorState message={error} />}
+        <Table
+          key={query}
+          rows={rows}
+          pageSize={8}
+          emptyText="No products match. Try another name, SKU, product code, or barcode."
+          columns={[
+            {
+              key: 'favorite',
+              label: 'Favorite',
+              render: (p) => (
+                <button
+                  className={`pos-favorite-toggle ${favorites.includes(p.id) ? 'selected' : ''}`}
+                  aria-label={`Favorite ${p.name}`}
+                  aria-pressed={favorites.includes(p.id)}
+                  onClick={() => toggleFavorite(p.id)}
+                >
+                  <Star size={18} />
+                </button>
+              ),
+            },
+            {
+              key: 'name',
+              label: 'Product',
+              render: (p) => (
+                <div className="pos-find-name">
+                  <strong>{p.name}</strong>
+                  <small>SKU: {p.sku}</small>
+                  <small>Code: {p.product_code || 'Pending'}</small>
+                  {p.barcode && <small>Barcode: {p.barcode}</small>}
+                </div>
+              ),
+            },
+            { key: 'price', label: 'Selling price', render: (p) => cash(p.price, currency) },
+            {
+              key: 'stock',
+              label: 'Available stock',
+              render: (p) => (
+                <span>
+                  {p.stock} {p.unit}
+                  <small className="pos-in-order">
+                    {cart.find((i) => i.product_id === p.id)?.quantity || 0} in order
+                  </small>
+                </span>
+              ),
+            },
+            {
+              key: 'add',
+              label: 'Add',
+              render: (p) => (
+                <Button
+                  variant="secondary"
+                  disabled={!p.stock}
+                  onClick={() => add(p)}
+                  aria-label={`Add ${p.name} to order`}
+                >
+                  <Plus size={16} />
+                  Add
+                </Button>
+              ),
+            },
+          ]}
+        />
+      </div>
+      <footer>
+        <Button onClick={onClose}>Back to order</Button>
+      </footer>
+    </Modal>
   );
 }
 function Checkout({ total, settings, payload, onClose, onComplete }) {

@@ -109,17 +109,47 @@ The login screen has buttons to fill these credentials. Demo users and sample re
 
 ## Included features
 
-- **Checkout:** search by name, SKU, or barcode; keyboard scanner input; quantity changes; customer selection or walk-in; authorized preset/custom discounts; inclusive/exclusive tax; cash received and change; configurable recorded payment methods; retry-safe checkout.
+- **Checkout:** enter quantity before scanning or choosing a product; Find Product search by name, SKU, internal code, or barcode; favorites; pre-checkout item/order voids; customer selection or walk-in; authorized discounts; inclusive/exclusive tax; cash received and change; configurable recorded payment methods; retry-safe checkout.
 - **Receipts:** store details, cashier, customer, product lines, discounts, tax, payment, change, and footer. Print through the browser (including Save as PDF) or download an HTML receipt. Store details are captured with the sale, so old receipts retain the original information.
-- **Products and categories:** create/edit products and categories, unique SKU/barcode, supplier linkage, product symbols or image URLs, costs, selling prices, stock minimums, units, and archival with history retained.
-- **Inventory:** stock-in/out, adjustments, damage and returns; low/out-of-stock alerts; before/change/after quantities, reason, employee, and timestamps for every movement.
-- **Transactions:** search, status/payment/date filters, CSV export, receipt retrieval, and manager/owner cancellation that restores inventory once.
+- **Products and categories:** create/edit products and categories, unique SKU/barcode, generated internal product codes, supplier linkage, product symbols or image URLs, costs, selling prices, stock minimums, units, and archival with history retained.
+- **Inventory:** stock-in/out, adjustments, damage, purchase receiving, and linked returns; low/out-of-stock alerts; product movement dialogs with running balances, date/type filters, server pagination, references, reasons, and operators. Non-sellable stock is tracked separately.
+- **Transactions and returns:** search, status/payment/date filters, CSV export, receipt lookup, and partial returns within 24 hours. Original sales remain unchanged; linked return records capture quantities, conditions, reasons, refunds, and operators. Owners configure eligible conditions.
 - **Purchasing:** supplier records, multi-item orders, payment/receiving statuses, order detail, and transactional receiving that increments stock once and updates product costs.
 - **Customers:** contact records, purchase history, optional loyalty points, and purchases without registration.
 - **Expenses:** categorized expense entry/editing and inclusion in profit estimates.
-- **Dashboard and reports:** current-day metrics, daily sales charts with daily/weekly/monthly ranges, category charts, best sellers, payment distribution, transaction/product/category/cashier reports, inventory, movements, low stock, purchasing, expenses, and profit. Date filters and CSV exports are included.
+- **Dashboard and reports:** year-to-month-to-day sales tables with calendar-period comparisons, gross sales, discounts, refunds, and net sales; current-day metrics, sales/category charts, best sellers, payment distribution, transaction/return/product/category/cashier reports, inventory, movements, purchasing, expenses, and profit. Date filters and CSV exports are included.
 - **Administration:** employee accounts, four enforced roles, account activation, password changes, store/tax/payment/receipt settings, discount presets, and a read-only audit trail.
 - **Responsive interface:** desktop sidebar, mobile navigation, responsive checkout, searchable/paginated tables, accessible form labels, native modal dialogs, loading/error states, and locally bundled fonts.
+
+## Using the new store workflows
+
+### Quantity, product search, and voids
+
+On Point of sale, enter a positive whole-number quantity, then scan once, enter a barcode/internal code manually, or use **Find Product**. The requested quantity is added to the existing cart line and resets to 1 only after success. Unknown codes and insufficient stock keep your entered quantity so you can retry. Stock is checked again during checkout. Products receive a unique internal code automatically, including products without barcodes; find it in Products or Find Product.
+
+Star products for quick selection in Favorites. Favorites are saved on this browser separately for each user and store. **Void item** and **Void order** remove uncompleted cart entries. Completed sales use the return workflow below.
+
+### Customer returns
+
+1. Open **Transactions → Find sale for return**, and enter the original receipt number. A transaction row also has a Return action.
+2. Review the original purchase timestamp, paid amounts, previous returns, and return deadline. Enter the quantities to return, choose the inspected condition for each item, and provide a reason.
+3. Confirm the condition assessment and select **Record return**. The API rejects expired returns, ineligible conditions, and quantities exceeding the unreturned purchased units.
+
+The return window is 24 hours from purchase. In **Settings → Product return policy**, the owner can enable or disable unused/unopened/intact, damaged, and defective conditions. Ordinary accepted returns restore available stock. Damaged and defective returns increase non-sellable stock without adding units available for checkout.
+
+Refunds use the original paid amount after discounts and applicable tax. Partial returns allocate rounding across units so returning all units refunds exactly the original payment. Retrying an uncertain request reuses its return key, preventing duplicate refunds and stock changes. The original receipt remains intact and shows its linked returns. Issue the money through the store's payment process; this app records the refund but does not transfer funds.
+
+### Product stock history
+
+Click a product row in **Inventory** to open its movement history. It shows opening stock, sales, receiving, returns, damage, and manual adjustments, with quantity in/out, balance after each movement, reference, operator, and reason. Filter by date or type and use the paging controls. Balances retain all earlier movements even when those entries are filtered out. Rows show the latest recorded movement first; a database sequence preserves stock mutation order when timestamps overlap. Manual adjustments require a reason.
+
+### Calendar sales overview
+
+In **Overview**, click a year to view months, then a month to view days. Use the breadcrumbs or Back control to navigate. Changes compare net sales with the immediately preceding calendar year, month, or day, including across year/month boundaries. A change from ₱900,000 to ₱780,000 displays **−13.33%** with a decrease indicator.
+
+Gross sales use original item prices before discounts; net sales use completed checkout totals, including collected tax, minus linked refunds processed during the selected period. Refunds follow their processing date in the configured store timezone. Voided transactions are excluded. A period may therefore have negative net sales when refunds exceed sales.
+
+Recorded history begins at the store's creation timestamp. Earlier periods display missing history, periods crossing that timestamp display partial history, and known periods without transactions display confirmed zero sales. Changes show **N/A** for zero or unavailable previous periods. In-progress periods compare matching local calendar cutoffs; if the preceding month is shorter, both percentage-comparison windows use that shorter day count. Leap-day comparisons use February 28 in both years when needed. Displayed sales totals still include all activity to date, and the table explains shortened comparisons.
 
 ## Role access
 
@@ -128,14 +158,14 @@ The login screen has buttons to fill these credentials. Demo users and sample re
 | Dashboard, reports, expenses               |   ✓   |    ✓    |         |           |
 | POS and receipts                           |   ✓   |    ✓    |    ✓    |           |
 | Sales history                              |  All  |   All   |   Own   |           |
-| Cancel sales                               |   ✓   |    ✓    |         |           |
+| Receipt lookup and product returns         |   ✓   |    ✓    |    ✓    |           |
 | Customers                                  |   ✓   |    ✓    |    ✓    |           |
 | Products, inventory, suppliers, purchasing |   ✓   |    ✓    |         |     ✓     |
 | Archive products, update purchase payment  |   ✓   |    ✓    |         |           |
 | Team, settings, discounts, audit           |   ✓   |         |         |           |
 | Own password                               |   ✓   |    ✓    |    ✓    |     ✓     |
 
-Cashier API responses omit product costs and administrative data. Authorization is enforced by the backend, independently of navigation visibility.
+Cashier API responses omit product costs and administrative data. Cashiers see their own sales list but can look up another cashier's receipt within the same store to process a return. Authorization is enforced by the backend, independently of navigation visibility.
 
 ## PostgreSQL configuration
 
@@ -165,6 +195,12 @@ npm.cmd --prefix pos_backend run migrate
 
 The SQL migration creates missing objects without dropping existing data. `DATABASE_URL` selects the live application's external database. The generated Sequelize `models/db.js` and code generators remain available for extending Xianfires; application repositories in `models/database.js` use parameterized PostgreSQL SQL.
 
+### Upgrade an existing deployment
+
+This update adds schema migration **2** in `pos_backend/models/schema.sql`: generated product codes, non-sellable stock counters, stock movement sequences, owner return conditions, and the `sales_returns`/`return_items` tables. Existing products receive their codes automatically. Existing sales, inventory quantities, and movement records are preserved. Reapplying the migration is safe; historical completed-sale cancellations remain in history, while the old cancellation API now directs operators to returns.
+
+Deploy the backend on Render first. Its normal `npm start` runs the additive migration before accepting requests, using the existing `DATABASE_URL`. You can also run `npm run migrate` from the backend directory in the configured server environment. Check `/api/health`, then deploy the frontend on Vercel. No database reset or new environment variable is required. These changes have been tested against isolated databases; the live deployment has not been modified here.
+
 For deployment, build the frontend and start the backend:
 
 ```powershell
@@ -182,7 +218,7 @@ pos_backend/
   app.js                    Express, .xian engine, sessions, security, static React
   routes/api.js             REST routes and role guards
   controllers/              Authentication, records, reports
-  services/                 Atomic sales, stock changes, and purchase receiving
+  services/                 Atomic sales, returns, stock changes, receiving, sales overview
   models/schema.sql         PostgreSQL tables, constraints, indexes, migration record
   models/database.js        PostgreSQL/PGlite connection and transaction adapter
   models/seed.js             Empty-store initialization and optional demo data
@@ -194,17 +230,20 @@ pos_frontend/
   src/lib/                  API, session/store context, fetching, CSV and formatting
 tests/
   api.test.js               Financial, stock, permission, and session integration tests
-  browser.mjs               Isolated browser workflow and responsive-layout checks
+  returns.test.js            Return validation, retry/concurrency, stock, migration tests
+  overview.test.js           Calendar comparisons, timezone and refund reporting tests
+  checkout.test.js           Quantity validation and exact product-code lookup
+  run-browser.mjs            Isolated browser workflows and responsive-layout checks
 ```
 
 - Money is stored and sent by the API as integer minor units (centavos for PHP). Quantities are whole units. Use prepackaged products for fractional weights in this version.
 - Store-scoped foreign keys and queries prepare the data model for multiple branches. This version exposes a single store per user and does not include a branch-switching interface.
 - Checkout uses server prices, sorted product row locks, and an idempotency key. A failed checkout rolls back the sale, payments, stock movements, points, and audit record together.
-- Receiving and cancellation lock their parent records to prevent repeated stock changes. Products are archived rather than deleted, preserving history.
-- Expense-adjusted profit is `sales collected − tax − sold-item cost − expenses`. Costs are snapshotted when selling; this version uses the product's current cost, updated on receipt, rather than FIFO or weighted-average accounting.
-- Category/product net sales allocate sale-level discounts/tax proportionally and round to minor units. Small allocation rounding differences are possible; sale totals remain authoritative.
+- Receiving and returns lock their parent records to prevent repeated stock changes. Return records, refund amounts, stock movements, loyalty reversals, and audit entries commit in one transaction. Products are archived rather than deleted, preserving history.
+- Expense-adjusted profit is `net sales − net tax − net sold-item cost − expenses`. Refunds reverse revenue and tax on their processing date; only sellable returns reverse the original sold-item cost. Costs are snapshotted when selling; this version uses the product's current cost, updated on receipt, rather than FIFO or weighted-average accounting.
+- Category/product net sales exclude tax and use the same exact proportional discount/tax allocation as returns, including residual cents. The calendar overview's net sales include collected tax, as labeled in the table.
 - Most record screens show the most recent 1,000 rows with client-side paging. Financial report exports include all matching rows within a date range of up to one year. Inventory reports are current snapshots.
-- GCash, Maya, bank transfer, and custom methods **record payments received separately**; they do not initiate or verify payment-provider transfers. Cancellation similarly records a reversal and stock return; the actual refund is handled outside the app.
+- GCash, Maya, bank transfer, and custom methods **record payments received separately**; they do not initiate or verify payment-provider transfers. Customer returns similarly record refunds; the actual money transfer is handled outside the app.
 - Product/store images currently use URLs. Loyalty points are earned and tracked; reward redemption is not included.
 
 ## Verification
@@ -218,7 +257,7 @@ npm.cmd run test:e2e
 
 API and browser tests use fresh, in-memory PostgreSQL databases; they do not change your store data. Browser tests use installed Chrome on Windows, or Playwright's Chromium on other systems. If needed, install the latter using `npx playwright install chromium`. Screenshots and downloaded test artifacts are written under `test-results`.
 
-The API suite covers permissions, CSRF/origin checks, validation, duplicate products, concurrent stock competition, checkout retries, cancellation, purchase receiving, stock ledgers, cross-store references, tax/discount totals, reports, account deactivation, and session invalidation.
+The API suite covers permissions, CSRF/origin checks, validation, duplicate products, concurrent stock competition, checkout/return retries, return expiry and conditions, partial refunds, sellable/non-sellable stock, receiving, movement balances/filtering/pagination, cross-store isolation, schema upgrades, tax/discount allocation, calendar boundaries, timezone handling, account deactivation, and session invalidation. Browser suites cover quantity-five scanning and manual selection, favorites, voids, return lookup and submission, owner conditions, stock history, sales drill-down, CSV exports, and mobile layouts.
 
 ## Install on another machine
 
