@@ -99,6 +99,7 @@ try {
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
+  await page.locator('summary').filter({ hasText: 'Product return policy' }).click();
   await page.getByRole('checkbox', { name: /Unused, unopened, intact packaging/ }).uncheck();
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByRole('status')).toContainText('Store settings saved');

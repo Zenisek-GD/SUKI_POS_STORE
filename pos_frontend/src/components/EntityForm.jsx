@@ -50,7 +50,6 @@ export default function EntityForm({ title, entity, record, fields, onClose, onS
   return (
     <Modal
       title={record?.id ? `Edit ${title.toLowerCase()}` : `Add ${title.toLowerCase()}`}
-      subtitle="Keep your store information up to date."
       onClose={() => !busy && onClose()}
     >
       <form onSubmit={save}>

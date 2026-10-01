@@ -104,7 +104,7 @@ export default function Inventory() {
           icon={Warehouse}
         />
       </div>
-      <section className="panel">
+      <section className="panel records-panel">
         <div className="section-tabs">
           <button className={tab === 'stock' ? 'active' : ''} onClick={() => setTab('stock')}>
             Stock overview

@@ -32,6 +32,7 @@ import {
 } from '../components/ui';
 import EntityForm from '../components/EntityForm';
 import Receipt from '../components/Receipt';
+import './Management.css';
 const personFields = (entity) => [
   {
     key: 'name',
@@ -95,17 +96,13 @@ export function People({ entity }) {
           Add {name.toLowerCase()}
         </Button>
       </PageHeader>
-      <div className="inline-stats">
-        <span>
-          {customer ? <Users size={18} /> : <Truck size={18} />}
-          <strong>{data[entity]?.length || 0}</strong>
-          {entity} in your store
-        </span>
-        {customer && <span>Walk-in customers can purchase without an account.</span>}
-      </div>
-      <section className="panel">
+      <section className="panel records-panel">
         <div className="toolbar">
           <SearchBox value={search} onChange={setSearch} placeholder={`Search ${entity}`} />
+          <span className="management-record-count">
+            {customer ? <Users size={16} /> : <Truck size={16} />}
+            {rows.length} {entity}
+          </span>
         </div>
         <Table
           rows={rows}
@@ -337,7 +334,7 @@ export function Expenses() {
           Record expense
         </Button>
       </PageHeader>
-      <div className="expense-total">
+      <div className="expense-total management-expense-total">
         <span className="expense-icon">
           <Wallet size={24} />
         </span>
@@ -352,7 +349,7 @@ export function Expenses() {
         </div>
         <span>{rows.length} records</span>
       </div>
-      <section className="panel">
+      <section className="panel records-panel">
         <div className="toolbar">
           <SearchBox value={search} onChange={setSearch} placeholder="Search expenses" />
           <select
@@ -463,17 +460,7 @@ export function Purchases() {
           New purchase
         </Button>
       </PageHeader>
-      <div className="inline-stats">
-        <span>
-          <Truck size={18} />
-          <strong>
-            {data.purchases?.filter((p) => p.receiving_status === 'pending').length || 0}
-          </strong>
-          orders awaiting delivery
-        </span>
-        <span>Inventory increases when you confirm receipt.</span>
-      </div>
-      <section className="panel">
+      <section className="panel records-panel">
         <div className="toolbar">
           <SearchBox value={search} onChange={setSearch} placeholder="Search order or supplier" />
           <select
@@ -485,6 +472,11 @@ export function Purchases() {
             <option value="pending">Awaiting delivery</option>
             <option value="received">Received</option>
           </select>
+          <span className="management-record-count">
+            <Truck size={16} />
+            {data.purchases?.filter((p) => p.receiving_status === 'pending').length || 0} awaiting
+            delivery
+          </span>
         </div>
         <Table
           rows={rows}
@@ -887,23 +879,30 @@ export function Team() {
           Add team member
         </Button>
       </PageHeader>
-      <div className="role-cards">
-        {[
-          ['Store owner', 'Full store access, settings, and team.'],
-          ['Manager', 'Sales, inventory, expenses, and reports.'],
-          ['Cashier', 'Checkout, customers, and own sales.'],
-          ['Inventory staff', 'Products, suppliers, stock, and purchases.'],
-        ].map(([title, description]) => (
-          <div key={title}>
-            <ShieldCheck size={19} />
-            <strong>{title}</strong>
-            <p>{description}</p>
-          </div>
-        ))}
-      </div>
-      <section className="panel">
+      <details className="management-role-guide">
+        <summary>
+          <ShieldCheck size={17} />
+          Role permissions
+        </summary>
+        <div className="role-cards">
+          {[
+            ['Store owner', 'Full store access, settings, and team.'],
+            ['Manager', 'Sales, inventory, expenses, and reports.'],
+            ['Cashier', 'Checkout, customers, and own sales.'],
+            ['Inventory staff', 'Products, suppliers, stock, and purchases.'],
+          ].map(([title, description]) => (
+            <div key={title}>
+              <ShieldCheck size={19} />
+              <strong>{title}</strong>
+              <p>{description}</p>
+            </div>
+          ))}
+        </div>
+      </details>
+      <section className="panel records-panel">
         <div className="toolbar">
           <SearchBox value={search} onChange={setSearch} placeholder="Search team members" />
+          <span className="management-record-count">{rows.length} team members</span>
         </div>
         <Table
           rows={rows}
@@ -1002,7 +1001,7 @@ export function Audit() {
           Export
         </Button>
       </PageHeader>
-      <section className="panel">
+      <section className="panel records-panel">
         <div className="toolbar">
           <SearchBox
             value={search}
@@ -1092,7 +1091,7 @@ export function Account() {
         title="My account"
         description="Manage your password and view your access."
       />
-      <div className="account-layout">
+      <div className="account-layout compact-account-layout">
         <section className="panel account-card">
           <span className="big-avatar">
             {user.name
@@ -1101,9 +1100,11 @@ export function Account() {
               .slice(0, 2)
               .join('')}
           </span>
-          <h2>{user.name}</h2>
-          <p>{user.email}</p>
-          <Badge>{user.role === 'admin' ? 'Store owner' : titleCase(user.role)}</Badge>
+          <div>
+            <h2>{user.name}</h2>
+            <p>{user.email}</p>
+            <Badge>{user.role === 'admin' ? 'Store owner' : titleCase(user.role)}</Badge>
+          </div>
         </section>
         <section className="panel">
           <div className="panel-header">

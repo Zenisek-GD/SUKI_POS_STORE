@@ -1,18 +1,9 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import {
-  ShoppingBag,
-  LogOut,
-  Menu,
-  X,
-  ArrowUpRight,
-  ChevronDown,
-  Bell,
-  Search,
-  Store,
-} from 'lucide-react';
+import { ShoppingBag, LogOut, Menu, X, ChevronDown, Bell, Search, Store } from 'lucide-react';
 import { useStore } from '../lib/storeContext';
 import { navigation } from '../lib/navigation';
+import './Workspace.css';
 
 export const Brand = () => (
   <span className="brand">
@@ -95,14 +86,6 @@ export default function Layout() {
           )}
         </nav>
         <div className="sidebar-bottom">
-          <div className="sidebar-note">
-            <span className="little-star">✧</span>
-            <strong>Small store. Big possibilities.</strong>
-            <p>
-              A little less paperwork.
-              <br />A little more peace of mind.
-            </p>
-          </div>
           <button className="logout" onClick={logout}>
             <LogOut size={17} />
             Sign out
@@ -183,16 +166,6 @@ export default function Layout() {
         <main className={location.pathname === '/pos' ? 'main-content pos-main' : 'main-content'}>
           <Outlet />
         </main>
-        <div className="app-footer">
-          <span>Made for your everyday business.</span>
-          <span>
-            <i />
-            All changes saved to your store
-          </span>
-          <a href="/account">
-            Your account <ArrowUpRight size={12} />
-          </a>
-        </div>
       </div>
     </div>
   );

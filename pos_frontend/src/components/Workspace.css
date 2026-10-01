@@ -1,0 +1,374 @@
+/* Compact workspace: keep controls readable and give records the available space. */
+.app-shell .topbar {
+  height: 56px;
+  min-height: 56px;
+  padding-inline: 16px;
+  gap: 12px;
+}
+.app-shell .topbar-actions {
+  gap: 12px;
+}
+.app-shell .notification-button,
+.app-shell .profile {
+  min-height: 44px;
+  min-width: 44px;
+  justify-content: center;
+}
+.app-shell .sidebar {
+  padding-top: 18px;
+}
+.app-shell .sidebar-brand {
+  padding-bottom: 16px;
+}
+.app-shell .sidebar-brand .brand {
+  font-size: 32px;
+}
+.app-shell .store-switch {
+  margin-bottom: 16px;
+  padding-block: 8px;
+}
+.app-shell .nav-group {
+  margin-bottom: 14px;
+}
+.app-shell .sidebar nav a {
+  min-height: 44px;
+  margin-block: 1px;
+  padding-block: 8px;
+  color: #c5d3c3;
+}
+.app-shell .sidebar nav a.active {
+  color: #30533a;
+}
+.app-shell .logout {
+  min-height: 44px;
+  color: #c5d3c3;
+}
+.app-shell .sidebar-version {
+  padding-top: 8px;
+}
+.app-shell .main-content:not(.pos-main) {
+  padding: 16px;
+}
+.app-shell .page-heading {
+  min-width: 0;
+  min-height: 44px;
+  margin-bottom: 12px;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.app-shell .page-heading h1 {
+  font-size: 22px;
+  letter-spacing: -0.6px;
+  overflow-wrap: anywhere;
+}
+.app-shell .page-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.app-shell .page-actions .btn {
+  min-height: 44px;
+  padding: 9px 12px;
+}
+.app-shell .btn,
+.app-shell .icon-button {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+.app-shell .icon-button {
+  min-width: 44px;
+}
+.app-shell .metrics-grid {
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.app-shell .metric-card {
+  padding: 12px 14px;
+  min-width: 0;
+}
+.app-shell .metric-icon {
+  width: 26px;
+  height: 26px;
+}
+.app-shell .metric-card > strong {
+  font-size: clamp(19px, 1.8vw, 24px);
+  margin-block: 5px 3px;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .metric-card > small {
+  font-size: 11px;
+  line-height: 1.4;
+}
+.app-shell .panel {
+  min-width: 0;
+}
+.app-shell .panel-header {
+  padding: 12px 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.app-shell .toolbar {
+  padding: 10px 12px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.app-shell .toolbar > div:not(.search-box) {
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.app-shell .toolbar > .search-box {
+  min-width: min(220px, 100%);
+  flex: 1 1 220px;
+}
+.app-shell .search-box {
+  min-height: 44px;
+  max-width: 100%;
+}
+.app-shell .search-box input {
+  min-height: 42px;
+  padding-block: 8px;
+}
+.app-shell .search-box button {
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  min-width: 36px;
+  margin-right: -8px;
+}
+.app-shell .toolbar select,
+.app-shell .toolbar input[type='date'] {
+  min-height: 44px;
+  padding: 8px 10px;
+  max-width: 100%;
+}
+.app-shell .inline-stats {
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+.app-shell .inline-stats button {
+  min-height: 44px;
+  align-items: center;
+}
+.app-shell .section-tabs {
+  padding-inline: 12px;
+  gap: 18px;
+  overflow-x: auto;
+}
+.app-shell .section-tabs button {
+  min-height: 44px;
+  padding-block: 10px;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.app-shell .table-scroll {
+  min-height: 0;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+}
+.app-shell .table-scroll:focus-visible {
+  outline: 2px solid #709275;
+  outline-offset: -2px;
+}
+.app-shell .table-scroll th {
+  padding: 10px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.app-shell .table-scroll td {
+  padding: 8px 12px;
+  height: 52px;
+  color: #52634b;
+}
+.record-code {
+  width: 115px;
+}
+.record-code > summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+  color: #456d48;
+  font-size: 12px;
+}
+.record-code code {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  user-select: all;
+  padding-bottom: 6px;
+}
+.app-shell .row-actions {
+  gap: 2px;
+}
+.app-shell .row-actions button {
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+.app-shell .transaction-number,
+.app-shell .person-cell,
+.app-shell .badge-button,
+.app-shell .text-link {
+  min-height: 44px;
+  align-content: center;
+}
+.app-shell .table-footer {
+  padding: 6px 12px;
+  gap: 8px;
+  background: #fff;
+}
+.app-shell .table-footer button {
+  width: 44px;
+  height: 44px;
+}
+.app-shell .table-footer > div {
+  gap: 6px;
+}
+.app-shell .page-note {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.app-shell .field {
+  margin-bottom: 12px;
+  gap: 6px;
+}
+.app-shell .field input:not([type='checkbox']),
+.app-shell .field select,
+.app-shell .check-field {
+  min-height: 44px;
+}
+.app-shell .form-grid {
+  column-gap: 14px;
+}
+.app-shell .modal > header {
+  padding: 12px 16px;
+  gap: 10px;
+}
+.app-shell .modal-body {
+  padding: 16px;
+}
+.app-shell .modal footer:not(.receipt footer),
+.app-shell .modal form > footer {
+  padding: 10px 16px;
+  flex-wrap: wrap;
+}
+.app-shell .modal footer .btn {
+  min-height: 44px;
+}
+.app-shell .empty {
+  padding: 24px 16px;
+}
+.app-shell .expense-total {
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+.app-shell .expense-total strong {
+  font-size: 24px;
+}
+@media (min-width: 901px) and (min-height: 560px) {
+  .app-shell .main-content:has(> .records-panel) {
+    height: calc(100dvh - 56px);
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .app-shell .main-content:has(> .records-panel) > :not(.records-panel) {
+    flex-shrink: 0;
+  }
+  .app-shell .main-content:has(> .records-panel) > .metrics-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .app-shell .main-content:has(> .records-panel) > .metrics-grid.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .app-shell .records-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 200px;
+  }
+  .app-shell .records-panel > :not(.table-scroll):not(.empty) {
+    flex-shrink: 0;
+  }
+  .app-shell .records-panel > .table-scroll {
+    flex: 1 1 auto;
+  }
+  .app-shell .records-panel > .empty {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+  }
+}
+@media (max-width: 900px) {
+  .app-shell .main-content:not(.pos-main) {
+    padding: 12px;
+  }
+  .app-shell .main-content:has(> .records-panel) > .metrics-grid {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scroll-snap-type: x proximity;
+  }
+  .app-shell .main-content:has(> .records-panel) > .metrics-grid > * {
+    flex: 1 0 155px;
+    scroll-snap-align: start;
+  }
+}
+@media (max-width: 590px) {
+  .app-shell .topbar {
+    padding-inline: 10px;
+    gap: 8px;
+  }
+  .app-shell .topbar-actions {
+    gap: 4px;
+  }
+  .app-shell .page-heading h1 {
+    font-size: 21px;
+  }
+  .app-shell .page-actions {
+    width: auto;
+    max-width: 100%;
+    justify-content: flex-start;
+  }
+  .app-shell .page-actions .btn {
+    flex: 0 1 auto;
+  }
+  .app-shell .toolbar > div:not(.search-box) {
+    width: 100%;
+  }
+  .app-shell .toolbar > div > select,
+  .app-shell .toolbar > div > input[type='date'] {
+    flex: 1 1 120px;
+    min-width: 0;
+  }
+  .app-shell .table-footer {
+    flex-wrap: wrap;
+    font-size: 11px;
+  }
+  .app-shell .table-footer > div {
+    margin-left: auto;
+  }
+  .app-shell .modal {
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+  .app-shell .modal-body {
+    padding: 14px;
+  }
+  .app-shell input:not([type='checkbox']),
+  .app-shell select,
+  .app-shell textarea {
+    font-size: 16px;
+  }
+  .app-shell .expense-total {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+}

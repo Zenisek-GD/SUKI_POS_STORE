@@ -119,7 +119,7 @@ The login screen has buttons to fill these credentials. Demo users and sample re
 - **Expenses:** categorized expense entry/editing and inclusion in profit estimates.
 - **Dashboard and reports:** year-to-month-to-day sales tables with calendar-period comparisons, gross sales, discounts, refunds, and net sales; current-day metrics, sales/category charts, best sellers, payment distribution, transaction/return/product/category/cashier reports, inventory, movements, purchasing, expenses, and profit. Date filters and CSV exports are included.
 - **Administration:** employee accounts, four enforced roles, account activation, password changes, store/tax/payment/receipt settings, discount presets, and a read-only audit trail.
-- **Responsive interface:** desktop sidebar, mobile navigation, responsive checkout, searchable/paginated tables, accessible form labels, native modal dialogs, loading/error states, and locally bundled fonts.
+- **Responsive interface:** compact page headers and controls, desktop tables that scroll independently with visible filters and pagination, mobile navigation, touch-friendly forms, responsive checkout, accessible form labels, native modal dialogs, and locally bundled fonts. Reports show records before charts; settings and role descriptions expand when needed.
 
 ## Using the new store workflows
 

@@ -8,12 +8,31 @@ import {
   Plus,
   Pencil,
   Percent,
+  ChevronDown,
+  RotateCcw,
 } from 'lucide-react';
 import { useStore } from '../lib/storeContext';
 import { api } from '../lib/api';
 import { PageHeader, Button, Field, ErrorState, Badge } from '../components/ui';
 import EntityForm from '../components/EntityForm';
 import '../components/storeOperations.css';
+import './Settings.css';
+
+function SettingsSection({ title, icon: Icon, children, initiallyOpen = false }) {
+  return (
+    <details className="panel settings-section" open={initiallyOpen}>
+      <summary>
+        <span className="settings-section-icon">
+          <Icon size={19} />
+        </span>
+        <h2>{title}</h2>
+        <ChevronDown className="settings-section-chevron" size={18} />
+      </summary>
+      {children}
+    </details>
+  );
+}
+
 export default function Settings() {
   const { data, refresh, notify } = useStore(),
     [values, setValues] = useState({ ...data.settings }),
@@ -60,18 +79,21 @@ export default function Settings() {
           Save changes
         </Button>
       </PageHeader>
-      <form id="settings-form" onSubmit={submit} className="settings-layout">
-        <section className="panel">
-          <div className="panel-header">
-            <div>
-              <h2>Product return policy</h2>
-              <p>Returns are accepted within 24 hours of the original purchase.</p>
-            </div>
-          </div>
+      <form
+        id="settings-form"
+        onSubmit={submit}
+        className="settings-layout compact-settings-layout"
+        onInvalidCapture={(event) => {
+          // Keep native validation available even when its section is collapsed.
+          const section = event.target.closest('details');
+          if (section) section.open = true;
+        }}
+      >
+        <SettingsSection title="Product return policy" icon={RotateCcw}>
           <div className="modal-body return-condition-settings">
             <p className="muted">
-              Enable the conditions your store accepts. The operator must inspect the product and
-              enter a reason. Damaged or defective products are recorded as non-sellable stock.
+              Accept returns within 24 hours. Select the conditions your store accepts. Damaged or
+              defective returns stay separate from sellable stock.
             </p>
             {(values.return_conditions || []).map((condition) => (
               <label key={condition.code}>
@@ -98,19 +120,8 @@ export default function Settings() {
               </label>
             ))}
           </div>
-        </section>
-        <section className="panel">
-          <div className="panel-header">
-            <div className="settings-section-title">
-              <span>
-                <Store size={21} />
-              </span>
-              <div>
-                <h2>Store profile</h2>
-                <p>Shown on your dashboard and receipts.</p>
-              </div>
-            </div>
-          </div>
+        </SettingsSection>
+        <SettingsSection title="Store profile" icon={Store} initiallyOpen>
           <div className="modal-body form-grid">
             <Field label="Store name" full>
               <input
@@ -168,19 +179,8 @@ export default function Settings() {
               </select>
             </Field>
           </div>
-        </section>
-        <section className="panel">
-          <div className="panel-header">
-            <div className="settings-section-title">
-              <span>
-                <ReceiptText size={21} />
-              </span>
-              <div>
-                <h2>Tax & receipts</h2>
-                <p>Set how totals appear at checkout.</p>
-              </div>
-            </div>
-          </div>
+        </SettingsSection>
+        <SettingsSection title="Tax & receipts" icon={ReceiptText}>
           <div className="modal-body">
             <div className="form-grid">
               <Field label="Tax rate (%)">
@@ -211,25 +211,16 @@ export default function Settings() {
                 onChange={(e) => change('receipt_footer', e.target.value)}
               />
             </Field>
-            <div className="mini-receipt">
-              <span>{values.name || 'Your store'}</span>
-              <p>{values.receipt_footer}</p>
-              <small>Your receipt footer preview</small>
-            </div>
-          </div>
-        </section>
-        <section className="panel">
-          <div className="panel-header">
-            <div className="settings-section-title">
-              <span>
-                <CreditCard size={21} />
-              </span>
-              <div>
-                <h2>Payment methods</h2>
-                <p>Choose the payments your store accepts.</p>
+            <details className="settings-receipt-preview">
+              <summary>Preview receipt footer</summary>
+              <div className="mini-receipt">
+                <span>{values.name || 'Your store'}</span>
+                <p>{values.receipt_footer}</p>
               </div>
-            </div>
+            </details>
           </div>
+        </SettingsSection>
+        <SettingsSection title="Payment methods" icon={CreditCard}>
           <div className="modal-body">
             <Field
               label="Enabled payment methods"
@@ -250,19 +241,8 @@ export default function Settings() {
               Wallet and bank methods record payments received outside this application.
             </p>
           </div>
-        </section>
-        <section className="panel">
-          <div className="panel-header">
-            <div className="settings-section-title">
-              <span>
-                <ShieldCheck size={21} />
-              </span>
-              <div>
-                <h2>Store preferences</h2>
-                <p>A few defaults to keep things running smoothly.</p>
-              </div>
-            </div>
-          </div>
+        </SettingsSection>
+        <SettingsSection title="Store preferences" icon={ShieldCheck}>
           <div className="modal-body form-grid">
             <Field
               label="Low-stock threshold"
@@ -299,51 +279,42 @@ export default function Settings() {
               </span>
             </Field>
           </div>
-        </section>
+        </SettingsSection>
         {error && (
           <div className="full">
             <ErrorState message={error} />
           </div>
         )}
       </form>
-      <section className="panel discount-settings">
-        <div className="panel-header">
-          <div className="settings-section-title">
-            <span>
-              <Percent size={21} />
-            </span>
-            <div>
-              <h2>Discount presets</h2>
-              <p>Quick discounts available at the register.</p>
-            </div>
+      <div className="compact-settings-discounts">
+        <SettingsSection title="Discount presets" icon={Percent}>
+          <div className="modal-body">
+            <Button variant="secondary" onClick={() => setDiscount({})}>
+              <Plus size={16} />
+              Add discount
+            </Button>
+            {data.discounts.map((d) => (
+              <div className="list-row" key={d.id}>
+                <strong>{d.name}</strong>
+                <span>{Number(d.percent)}%</span>
+                <Badge tone={d.active ? 'green' : 'gray'}>{d.active ? 'Active' : 'Disabled'}</Badge>
+                <button
+                  className="icon-button"
+                  aria-label={`Edit ${d.name}`}
+                  onClick={() => setDiscount(d)}
+                >
+                  <Pencil size={16} />
+                </button>
+              </div>
+            ))}
+            {!data.discounts.length && (
+              <p className="muted">
+                Add your first preset. Custom authorized discounts are also available at checkout.
+              </p>
+            )}
           </div>
-          <Button variant="secondary" onClick={() => setDiscount({})}>
-            <Plus size={16} />
-            Add discount
-          </Button>
-        </div>
-        <div className="modal-body">
-          {data.discounts.map((d) => (
-            <div className="list-row" key={d.id}>
-              <strong>{d.name}</strong>
-              <span>{Number(d.percent)}%</span>
-              <Badge tone={d.active ? 'green' : 'gray'}>{d.active ? 'Active' : 'Disabled'}</Badge>
-              <button
-                className="icon-button"
-                aria-label={`Edit ${d.name}`}
-                onClick={() => setDiscount(d)}
-              >
-                <Pencil size={16} />
-              </button>
-            </div>
-          ))}
-          {!data.discounts.length && (
-            <p className="muted">
-              Add your first preset. Custom authorized discounts are also available at checkout.
-            </p>
-          )}
-        </div>
-      </section>
+        </SettingsSection>
+      </div>
       {discount && (
         <EntityForm
           title="Discount"

@@ -131,7 +131,7 @@ export default function Sales() {
           icon={TrendingUp}
         />
       </div>
-      <section className="panel">
+      <section className="panel records-panel">
         <div className="toolbar">
           <SearchBox
             value={search}

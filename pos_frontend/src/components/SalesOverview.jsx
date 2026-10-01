@@ -55,7 +55,6 @@ export default function SalesOverview() {
       <div className="panel-header">
         <div>
           <h2>Sales by calendar period</h2>
-          <p>Explore yearly, monthly, and daily sales.</p>
         </div>
         <Button variant="secondary" onClick={resource.reload} aria-label="Refresh calendar sales">
           <RefreshCw size={16} />
@@ -104,7 +103,12 @@ export default function SalesOverview() {
       ) : (
         report && (
           <>
-            <div className="table-scroll">
+            <div
+              className="table-scroll overview-table"
+              tabIndex={0}
+              role="region"
+              aria-label={`${level} sales records`}
+            >
               <table>
                 <thead>
                   <tr>
@@ -180,7 +184,8 @@ export default function SalesOverview() {
                 </tbody>
               </table>
             </div>
-            <div className="overview-notes">
+            <details className="overview-notes">
+              <summary>How sales are calculated</summary>
               <p>{report.basis}</p>
               <p>
                 {report.comparison_basis} Percentage change = (current net sales − previous net
@@ -192,7 +197,7 @@ export default function SalesOverview() {
                 {dateTime(report.reporting_started_at, report.timezone)}. Partial history cannot
                 provide a complete comparison.
               </p>
-            </div>
+            </details>
           </>
         )
       )}

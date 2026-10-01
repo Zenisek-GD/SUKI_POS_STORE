@@ -6,6 +6,7 @@ import { cash, dateRange, downloadCSV, titleCase, dateTime } from '../lib/api';
 import { PageHeader, Button, Table, Loading, ErrorState } from '../components/ui';
 import { Metric, SalesChart, CategoryChart } from './Dashboard';
 import SalesOverview from '../components/SalesOverview';
+import './Insights.css';
 const reports = [
   ['daily', 'Daily sales'],
   ['transactions', 'Sales transactions'],
@@ -137,7 +138,7 @@ export default function Reports() {
       ),
     );
   return (
-    <>
+    <div className="insights-page reports-page">
       <PageHeader
         eyebrow="KNOW YOUR BUSINESS BETTER"
         title="Reports & insights"
@@ -148,7 +149,6 @@ export default function Reports() {
           Export CSV
         </Button>
       </PageHeader>
-      <SalesOverview />
       <form
         className="report-filters"
         onSubmit={(e) => {
@@ -169,6 +169,10 @@ export default function Reports() {
             <button
               type="button"
               key={days}
+              aria-pressed={
+                range.from === dateRange(days, data.settings.timezone).from &&
+                range.to === dateRange(days, data.settings.timezone).to
+              }
               onClick={() => {
                 const next = dateRange(days, data.settings.timezone);
                 setDraft(next);
@@ -179,29 +183,34 @@ export default function Reports() {
             </button>
           ))}
         </div>
-        <label className="date-field">
-          From
-          <input
-            type="date"
-            required
-            aria-label="Report start date"
-            value={draft.from}
-            max={draft.to}
-            onChange={(e) => setDraft((v) => ({ ...v, from: e.target.value }))}
-          />
-        </label>
-        <label className="date-field">
-          To
-          <input
-            type="date"
-            required
-            aria-label="Report end date"
-            value={draft.to}
-            min={draft.from}
-            onChange={(e) => setDraft((v) => ({ ...v, to: e.target.value }))}
-          />
-        </label>
-        <Button type="submit">Apply</Button>
+        <details className="report-custom-dates">
+          <summary>Custom dates</summary>
+          <div className="report-custom-fields">
+            <label className="date-field">
+              From
+              <input
+                type="date"
+                required
+                aria-label="Report start date"
+                value={draft.from}
+                max={draft.to}
+                onChange={(e) => setDraft((v) => ({ ...v, from: e.target.value }))}
+              />
+            </label>
+            <label className="date-field">
+              To
+              <input
+                type="date"
+                required
+                aria-label="Report end date"
+                value={draft.to}
+                min={draft.from}
+                onChange={(e) => setDraft((v) => ({ ...v, to: e.target.value }))}
+              />
+            </label>
+            <Button type="submit">Apply</Button>
+          </div>
+        </details>
       </form>
       {resource.loading ? (
         <Loading />
@@ -237,6 +246,45 @@ export default function Reports() {
                 icon={TrendingUp}
               />
             </div>
+            <section className="panel report-results">
+              <div className="toolbar">
+                <div>
+                  <h2>{reports.find((r) => r[0] === type)?.[1]}</h2>
+                  <span className="report-count">{rows.length} records</span>
+                </div>
+                <select
+                  aria-label="Report type"
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                >
+                  {reports.map(([key, label]) => (
+                    <option value={key} key={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Table rows={rows} columns={columns} />
+              <details className="report-explanation">
+                <summary>About this report</summary>
+                <p className="muted report-note">
+                  {['inventory', 'low'].includes(type)
+                    ? 'Current stock snapshot. These quantities are not limited by the date range.'
+                    : type === 'profit'
+                      ? 'Profit excludes collected tax and refunds processed in this period. Sellable returns reverse their original cost; damaged returns remain a cost.'
+                      : type === 'products' || type === 'categories'
+                        ? 'Net sales are after discounts and refunds and exclude tax; refunds follow their processing date. Quantities are sales less returns in this period.'
+                        : type === 'transactions'
+                          ? 'Original completed transactions. Linked refunds are listed separately under Customer returns and deducted from financial totals.'
+                          : 'Completed sales less refunds processed in this period, using the store timezone. Voided transactions are excluded.'}
+                </p>
+              </details>
+            </section>
+            {type === 'categories' && (
+              <div className="panel standalone-category">
+                <CategoryChart rows={report.categories} currency={data.settings.currency} />
+              </div>
+            )}
             <div className="dashboard-charts report-charts">
               <section className="panel">
                 <div className="panel-header">
@@ -296,44 +344,10 @@ export default function Reports() {
                 </div>
               </section>
             </div>
-            <section className="panel">
-              <div className="toolbar">
-                <div>
-                  <h2>{reports.find((r) => r[0] === type)?.[1]}</h2>
-                  <p className="muted report-note">
-                    {['inventory', 'low'].includes(type)
-                      ? 'Current stock snapshot. These quantities are not limited by the date range.'
-                      : type === 'profit'
-                        ? 'Profit excludes collected tax and refunds processed in this period. Sellable returns reverse their original cost; damaged returns remain a cost.'
-                        : type === 'products' || type === 'categories'
-                          ? 'Net sales are after discounts and refunds and exclude tax; refunds follow their processing date. Quantities are sales less returns in this period.'
-                          : type === 'transactions'
-                            ? 'Original completed transactions. Linked refunds are listed separately under Customer returns and deducted from financial totals.'
-                            : 'Completed sales less refunds processed in this period, using the store timezone. Voided transactions are excluded.'}
-                  </p>
-                </div>
-                <select
-                  aria-label="Report type"
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                >
-                  {reports.map(([key, label]) => (
-                    <option value={key} key={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Table rows={rows} columns={columns} />
-            </section>
-            {type === 'categories' && (
-              <div className="panel standalone-category">
-                <CategoryChart rows={report.categories} currency={data.settings.currency} />
-              </div>
-            )}
           </>
         )
       )}
-    </>
+      <SalesOverview />
+    </div>
   );
 }

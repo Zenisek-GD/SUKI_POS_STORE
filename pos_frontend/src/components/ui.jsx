@@ -82,15 +82,11 @@ export const ErrorState = ({ message, retry }) => (
     )}
   </div>
 );
-export function PageHeader({ eyebrow, title, description, children }) {
+export function PageHeader({ title, children }) {
   return (
     <div className="page-heading">
-      <div>
-        {eyebrow && <span className="eyebrow">{eyebrow}</span>}
-        <h1>{title}</h1>
-        {description && <p>{description}</p>}
-      </div>
-      <div className="page-actions">{children}</div>
+      <h1>{title}</h1>
+      {children && <div className="page-actions">{children}</div>}
     </div>
   );
 }
@@ -226,7 +222,7 @@ export function Table({
     start = (current - 1) * pageSize;
   return (
     <>
-      <div className="table-scroll">
+      <div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable records">
         <table>
           <thead>
             <tr>

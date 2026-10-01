@@ -15,6 +15,7 @@ import {
 import { useStore } from '../lib/storeContext';
 import { useResource } from '../lib/useResource';
 import SalesOverview from '../components/SalesOverview';
+import './Insights.css';
 import { cash, dateRange, localDate, downloadCSV, dateTime } from '../lib/api';
 import {
   PageHeader,
@@ -206,7 +207,7 @@ export default function Dashboard() {
     .filter((p) => p.active && p.stock <= (p.min_stock ?? data.settings.low_stock_threshold))
     .sort((a, b) => a.stock - b.stock);
   return (
-    <>
+    <div className="insights-page dashboard-page">
       <PageHeader
         eyebrow={`HELLO, ${user.name.split(' ')[0].toUpperCase()} ☀`}
         title="A good day for business."
@@ -238,10 +239,6 @@ export default function Dashboard() {
             day: 'numeric',
             year: 'numeric',
           }).format(new Date())}
-        </span>
-        <span>
-          <i />
-          Live store overview
         </span>
       </div>
       {todayReport.error ? (
@@ -285,7 +282,6 @@ export default function Dashboard() {
           <div className="panel-header">
             <div>
               <h2>Sales overview</h2>
-              <p>A little progress, every day.</p>
             </div>
             <select
               value={days}
@@ -327,7 +323,6 @@ export default function Dashboard() {
           <div className="panel-header">
             <div>
               <h2>Sales by category</h2>
-              <p>What your customers love.</p>
             </div>
             <span className="subtle-icon">
               <Package size={18} />
@@ -340,13 +335,11 @@ export default function Dashboard() {
           )}
         </section>
       </div>
-      <SalesOverview />
       <div className="dashboard-bottom">
         <section className="panel">
           <div className="panel-header">
             <div>
               <h2>Recent transactions</h2>
-              <p>Every sale, right here.</p>
             </div>
             <Link className="text-link" to="/sales">
               View all
@@ -407,7 +400,6 @@ export default function Dashboard() {
           <div className="panel-header">
             <div>
               <h2>Best sellers</h2>
-              <p>Your shelf favorites this period.</p>
             </div>
             <span>↗</span>
           </div>
@@ -443,11 +435,8 @@ export default function Dashboard() {
             <TriangleAlert size={23} />
           </span>
           <div>
-            <strong>A little restock goes a long way.</strong>
-            <p>
-              {low.length} products need your attention. Keep your customers’ favorites on the
-              shelf.
-            </p>
+            <strong>{low.length} products need restocking</strong>
+            <p>{low.filter((p) => !p.stock).length} out of stock</p>
           </div>
           <Link className="btn secondary" to="/inventory?status=low">
             Review stock
@@ -455,6 +444,7 @@ export default function Dashboard() {
           </Link>
         </div>
       )}
-    </>
+      <SalesOverview />
+    </div>
   );
 }

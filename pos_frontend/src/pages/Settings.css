@@ -1,0 +1,123 @@
+.settings-layout.compact-settings-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 1040px;
+}
+
+.settings-section {
+  min-width: 0;
+}
+
+.settings-section > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 10px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.settings-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-section[open] > summary {
+  border-bottom: 1px solid #e6ece1;
+}
+
+.settings-section > summary h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+}
+
+.settings-section-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: #f0f5eb;
+  color: #52705b;
+}
+
+.settings-section-chevron {
+  flex: 0 0 auto;
+  color: #67766d;
+  transition: transform 0.15s ease;
+}
+
+.settings-section[open] > summary .settings-section-chevron {
+  transform: rotate(180deg);
+}
+
+.settings-section > .modal-body {
+  padding: 16px;
+}
+
+.settings-section .field textarea {
+  min-height: 68px;
+}
+
+.settings-receipt-preview > summary {
+  min-height: 44px;
+  align-content: center;
+  font-size: 13px;
+  color: #45614d;
+  cursor: pointer;
+}
+
+.settings-receipt-preview .mini-receipt {
+  margin: 0;
+  padding: 14px;
+}
+
+.compact-settings-discounts {
+  max-width: 1040px;
+  margin-top: 10px;
+}
+
+.compact-settings-discounts .list-row {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.compact-settings-discounts .list-row > strong {
+  flex: 1;
+  min-width: 110px;
+  overflow-wrap: anywhere;
+}
+
+.settings-section .return-condition-settings {
+  gap: 8px;
+}
+
+.settings-section .return-condition-settings label {
+  min-height: 44px;
+  padding: 7px 0;
+  cursor: pointer;
+}
+
+.settings-section .return-condition-settings input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 600px) {
+  .settings-section > summary {
+    padding: 10px 12px;
+  }
+
+  .settings-section > .modal-body {
+    padding: 12px;
+  }
+
+  .settings-section .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

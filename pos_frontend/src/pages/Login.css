@@ -1,0 +1,55 @@
+.login-page .login-story {
+  padding: 32px 36px;
+}
+.login-page .story-content {
+  padding: 32px 0;
+}
+.login-page .story-content h1 {
+  font-size: clamp(36px, 3.6vw, 54px);
+  margin-block: 0 20px;
+}
+.login-page .login-form-side {
+  padding: 28px;
+}
+.login-page .login-form h2 {
+  font-size: 28px;
+}
+.login-page .login-form form {
+  margin-top: 20px;
+}
+.login-page .login-form .field {
+  margin-bottom: 14px;
+  gap: 6px;
+}
+.login-page .login-form input {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+.login-page .password-input button {
+  min-width: 44px;
+}
+.login-page .demo-panel {
+  padding: 12px;
+  margin-top: 18px;
+}
+.login-page .demo-panel button {
+  min-height: 44px;
+  padding-inline: 10px;
+}
+.login-page .login-help {
+  margin-top: 14px;
+}
+.login-page .login-copyright {
+  margin-top: 24px;
+}
+@media (max-width: 760px) {
+  .login-page .login-form-side {
+    padding: 24px 20px;
+  }
+  .login-page .login-mobile-brand {
+    margin-bottom: 24px;
+  }
+  .login-page .login-form input {
+    font-size: 16px;
+  }
+}

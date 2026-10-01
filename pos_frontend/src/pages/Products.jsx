@@ -87,7 +87,16 @@ export default function Products() {
         </div>
       ),
     },
-    { key: 'product_code', label: 'Product code' },
+    {
+      key: 'product_code',
+      label: 'Product code',
+      render: (p) => (
+        <details className="record-code">
+          <summary aria-label={`Product code for ${p.name}`}>View code</summary>
+          <code>{p.product_code}</code>
+        </details>
+      ),
+    },
     {
       key: 'category',
       label: 'Category',
@@ -186,7 +195,7 @@ export default function Products() {
           <ArrowSmall />
         </button>
       </div>
-      <section className="panel">
+      <section className="panel records-panel">
         <div className="toolbar">
           <SearchBox
             value={search}

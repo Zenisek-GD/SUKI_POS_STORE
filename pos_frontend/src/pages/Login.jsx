@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Eye, EyeOff, ShoppingBag, Check, BarChart3, Boxes } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, ShoppingBag, BarChart3, Boxes } from 'lucide-react';
 import { Brand } from '../components/Layout';
 import { Button, Field, ErrorState } from '../components/ui';
 import { api } from '../lib/api';
 import { useStore } from '../lib/storeContext';
+import './Login.css';
 const demos = {
   admin: ['owner@suki.store', 'SukiOwner2026!'],
   cashier: ['cashier@suki.store', 'SukiCashier2026!'],
@@ -40,10 +41,6 @@ export default function Login() {
       <section className="login-story">
         <Brand />
         <div className="story-content">
-          <span className="story-tag">
-            <i />
-            YOUR EVERYDAY STORE COMPANION
-          </span>
           <h1>
             Good business
             <br />
@@ -72,15 +69,6 @@ export default function Login() {
               See your growth
             </span>
           </div>
-          <div className="story-card">
-            <div className="story-card-icon">
-              <Check size={23} />
-            </div>
-            <div>
-              <strong>One less thing to worry about.</strong>
-              <p>Your sales, stock, and records. All together.</p>
-            </div>
-          </div>
         </div>
         <footer>Built for small businesses. Made for everyday.</footer>
       </section>
@@ -89,7 +77,6 @@ export default function Login() {
           <Brand />
         </div>
         <div className="login-form">
-          <span className="eyebrow">LET’S OPEN UP SHOP</span>
           <h2>Welcome back.</h2>
           <p>Sign in to take care of your store.</p>
           <form onSubmit={submit}>
