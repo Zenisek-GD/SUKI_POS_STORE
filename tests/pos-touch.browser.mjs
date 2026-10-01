@@ -66,6 +66,35 @@ try {
       true,
     );
   }
+  async function assertFullyVisible(locator, container) {
+    const [item, bounds] = await Promise.all([locator.boundingBox(), container.boundingBox()]);
+    expect(item).not.toBeNull();
+    expect(bounds).not.toBeNull();
+    const viewport = page.viewportSize();
+    expect(item.y).toBeGreaterThanOrEqual(Math.max(0, bounds.y) - 1);
+    expect(item.y + item.height).toBeLessThanOrEqual(
+      Math.min(viewport.height, bounds.y + bounds.height) + 1,
+    );
+    expect(item.x).toBeGreaterThanOrEqual(Math.max(0, bounds.x) - 1);
+    expect(item.x + item.width).toBeLessThanOrEqual(
+      Math.min(viewport.width, bounds.x + bounds.width) + 1,
+    );
+  }
+  async function assertCompactSpace() {
+    const dimensions = await page.evaluate(() => {
+      const height = (selector) => document.querySelector(selector).getBoundingClientRect().height;
+      return {
+        workspace: height('.touch-pos'),
+        products: height('.pos-catalog-products'),
+        order: height('.cart-panel'),
+        lines: height('.pos-order-lines'),
+      };
+    });
+    expect(dimensions.products).toBeGreaterThanOrEqual(dimensions.workspace * 0.55);
+    expect(dimensions.lines).toBeGreaterThanOrEqual(dimensions.order * 0.45);
+    expect(dimensions.products).toBeGreaterThanOrEqual(240);
+    expect(dimensions.lines).toBeGreaterThanOrEqual(230);
+  }
 
   await expect(quantity).toHaveValue('1');
   await page.getByRole('button', { name: 'Open quantity keypad', exact: true }).tap();
@@ -76,6 +105,23 @@ try {
   await page.getByRole('button', { name: 'Add Touch Sardines', exact: true }).tap();
   await expect(sardinesQuantity).toHaveValue('5');
   await expect(quantity).toHaveValue('1');
+  await expect(page.getByRole('button', { name: 'Dismiss notification', exact: true })).toHaveCount(
+    0,
+  );
+
+  // A newly added item's name, price and controls must fit together on a short desktop.
+  // This catches the original layout where focus scrolled the product name out of view.
+  await page.setViewportSize({ width: 1280, height: 650 });
+  await assertCompactSpace();
+  await assertFullyVisible(
+    page.locator('.pos-order-line').first(),
+    page.locator('.pos-order-lines'),
+  );
+  await assertFullyVisible(
+    page.locator('.pos-order-line').first().getByRole('heading', { name: 'Touch Sardines' }),
+    page.locator('.pos-order-lines'),
+  );
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   // Opening a keypad starts a replacement; later digits append, and delete removes one digit.
   await page.getByRole('button', { name: 'Open quantity keypad', exact: true }).tap();
@@ -139,6 +185,18 @@ try {
   await page.locator('.pos-order-discount > summary').tap();
   await page.getByLabel('Custom discount percent', { exact: true }).fill('5');
   await page.locator('.pos-order-discount > summary').tap();
+  const details = page.locator('.pos-order-details');
+  const linesHeight = await page
+    .locator('.pos-order-lines')
+    .evaluate((element) => element.clientHeight);
+  await details.locator(':scope > summary').tap();
+  await expect(details.getByText('Subtotal', { exact: true })).toBeVisible();
+  await expect(details.getByText('Discount (5%)', { exact: true })).toBeVisible();
+  expect(await page.locator('.pos-order-lines').evaluate((element) => element.clientHeight)).toBe(
+    linesHeight,
+  );
+  await details.locator(':scope > summary').tap();
+  await expect(details.getByText('Subtotal', { exact: true })).toBeHidden();
   console.log(
     'PASS: current-order quantity editing, stock-bound rejection, and Find Product keypad',
   );
@@ -159,6 +217,8 @@ try {
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 1024, height: 768 },
+    { width: 1280, height: 650 },
+    { width: 1100, height: 620 },
   ]) {
     await page.setViewportSize(viewport);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -167,13 +227,28 @@ try {
     ).toBeInViewport();
     await expect(scan).toBeInViewport();
     await expect(charge).toBeInViewport();
+    await assertCompactSpace();
+    await page.locator('.pos-catalog-products').evaluate((element) => {
+      element.scrollTop = 0;
+    });
+    await assertFullyVisible(
+      page.locator('.product-card').first(),
+      page.locator('.pos-catalog-products'),
+    );
     await expect
       .poll(() => lines.evaluate((element) => element.scrollHeight > element.clientHeight))
       .toBe(true);
     await lines.evaluate((element) => {
+      element.scrollTop = 0;
+    });
+    await assertFullyVisible(lines.locator('.pos-order-line').first(), lines);
+    if (viewport.width === 1280)
+      await page.screenshot({ path: 'test-results/pos-compact-desktop.png', fullPage: false });
+    await lines.evaluate((element) => {
       element.scrollTop = element.scrollHeight;
     });
     await expect.poll(() => lines.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await assertFullyVisible(lines.locator('.pos-order-line').last(), lines);
     await expect(charge).toBeInViewport();
     await assertNoOverflow();
   }
@@ -185,6 +260,9 @@ try {
     element.scrollTop = 0;
   });
   await page.screenshot({ path: 'test-results/pos-touch-desktop.png', fullPage: false });
+  console.log(
+    'PASS: short desktop product space, complete cards, and complete first/last order rows',
+  );
 
   const viewOrder = page.getByRole('button', { name: 'View current order', exact: true });
   for (const viewport of [
@@ -193,7 +271,14 @@ try {
   ]) {
     await page.setViewportSize(viewport);
     await expect(viewOrder).toBeInViewport();
+    await expect
+      .poll(() =>
+        page.locator('.sidebar').evaluate((element) => element.getBoundingClientRect().right),
+      )
+      .toBeLessThanOrEqual(0);
     await assertNoOverflow();
+    if (viewport.width === 390)
+      await page.screenshot({ path: 'test-results/pos-compact-mobile.png', fullPage: false });
     await page.getByRole('button', { name: 'Open quantity keypad', exact: true }).tap();
     await expect(
       keypad().getByRole('button', { name: 'Quantity digit 1', exact: true }),

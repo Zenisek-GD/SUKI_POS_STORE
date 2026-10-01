@@ -1,3 +1,4 @@
+import { useId, useLayoutEffect, useRef } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -5,12 +6,12 @@ import {
   Keyboard,
   Minus,
   Plus,
-  ShoppingBag,
   Trash2,
   UserRound,
 } from 'lucide-react';
-import { Button, Empty, ProductAvatar } from './ui';
+import { Button, Empty } from './ui';
 import { cash } from '../lib/api';
+import './CurrentOrder.css';
 
 export default function CurrentOrder({
   items,
@@ -35,20 +36,35 @@ export default function CurrentOrder({
   const m = (value) => cash(value, settings.currency);
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
   const limit = user.role === 'cashier' ? Number(settings.cashier_discount_limit) : 100;
+  const lines = useRef(null);
+  const previousProducts = useRef(new Set());
+  const optionsGroup = useId();
+
+  useLayoutEffect(() => {
+    const added = items.filter((item) => !previousProducts.current.has(item.product_id)).at(-1);
+    previousProducts.current = new Set(items.map((item) => item.product_id));
+    const list = lines.current;
+    if (!added || !list) return;
+    const row = [...list.children].find((child) => child.dataset.productId === added.product_id);
+    if (!row) return;
+    const listBounds = list.getBoundingClientRect();
+    const rowBounds = row.getBoundingClientRect();
+    if (rowBounds.height > list.clientHeight || rowBounds.top < listBounds.top) {
+      list.scrollTop += rowBounds.top - listBounds.top;
+    } else if (rowBounds.bottom > listBounds.bottom) {
+      list.scrollTop += rowBounds.bottom - listBounds.bottom;
+    }
+  }, [items]);
+
   return (
-    <div className="pos-order-content">
+    <div className="pos-order-content pos-order-compact">
       {!compact && (
         <header className="pos-order-heading">
           <div>
-            <span className="pos-order-icon">
-              <ShoppingBag size={22} />
+            <h2>Current order</h2>
+            <span className="pos-order-count">
+              {count} {count === 1 ? 'item' : 'items'}
             </span>
-            <div>
-              <h2>Current order</h2>
-              <p>
-                {items.length} products <span aria-hidden="true">·</span> {count} items
-              </p>
-            </div>
           </div>
           <button
             type="button"
@@ -97,7 +113,7 @@ export default function CurrentOrder({
           </select>
         </label>
       </div>
-      <div className="pos-order-lines" aria-label="Items in current order" tabIndex={0}>
+      <div ref={lines} className="pos-order-lines" aria-label="Items in current order" tabIndex={0}>
         {!items.length ? (
           <Empty
             title="Your order starts here"
@@ -105,9 +121,12 @@ export default function CurrentOrder({
           />
         ) : (
           items.map((item) => (
-            <article className="pos-order-line" key={item.product_id}>
+            <article
+              className="pos-order-line"
+              key={item.product_id}
+              data-product-id={item.product_id}
+            >
               <div className="pos-order-product">
-                <ProductAvatar product={item} />
                 <div>
                   <h3>{item.name || 'Unavailable product'}</h3>
                   <p>
@@ -153,10 +172,10 @@ export default function CurrentOrder({
                   type="button"
                   className="pos-line-keypad"
                   aria-label={`Edit quantity for ${item.name}`}
+                  title="Edit quantity with keypad"
                   onClick={() => onEditQuantity(item)}
                 >
                   <Keyboard size={18} />
-                  <span>Keypad</span>
                 </button>
                 <button
                   type="button"
@@ -180,70 +199,71 @@ export default function CurrentOrder({
         )}
       </div>
       <div className="pos-order-bottom">
-        <details className="pos-order-discount">
-          <summary>
-            <span>Order discount</span>
-            <strong>{discount ? `${discount}% applied` : 'Add discount'}</strong>
-            <ChevronDown size={17} />
-          </summary>
-          <div className="pos-discount-fields">
-            <label>
-              Preset
-              <select
-                value={discount}
-                onChange={(e) => onDiscount(Number(e.target.value))}
-                aria-label="Order discount"
-              >
-                <option value="0">No discount</option>
-                {discounts
-                  .filter((d) => d.active && Number(d.percent) <= limit)
-                  .map((d) => (
-                    <option key={d.id} value={Number(d.percent)}>
-                      {d.name} ({Number(d.percent)}%)
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label>
-              Percent
-              <input
-                type="number"
-                inputMode="decimal"
-                aria-label="Custom discount percent"
-                min="0"
-                max={limit}
-                step="0.5"
-                value={discount}
-                onChange={(e) => onDiscount(Math.min(limit, Math.max(0, Number(e.target.value))))}
-              />
-            </label>
-          </div>
-        </details>
-        <div className="pos-order-totals">
-          <p>
-            <span>Subtotal</span>
-            <strong>{m(totals.subtotal)}</strong>
-          </p>
-          {discount > 0 && (
-            <p>
-              <span>Discount ({discount}%)</span>
-              <strong>−{m(totals.discountAmount)}</strong>
-            </p>
-          )}
-          <p>
-            <span>
-              Tax ({Number(settings.tax_rate)}%{settings.tax_inclusive ? ', included' : ''})
-            </span>
-            <strong>{m(totals.tax)}</strong>
-          </p>
+        <div className="pos-order-options">
+          <details className="pos-order-details" name={optionsGroup}>
+            <summary>
+              Order details <ChevronDown size={16} />
+            </summary>
+            <div className="pos-order-option-panel pos-order-totals">
+              <p>
+                <span>Subtotal</span>
+                <strong>{m(totals.subtotal)}</strong>
+              </p>
+              {discount > 0 && (
+                <p>
+                  <span>Discount ({discount}%)</span>
+                  <strong>−{m(totals.discountAmount)}</strong>
+                </p>
+              )}
+              <p>
+                <span>
+                  Tax ({Number(settings.tax_rate)}%{settings.tax_inclusive ? ', included' : ''})
+                </span>
+                <strong>{m(totals.tax)}</strong>
+              </p>
+            </div>
+          </details>
+          <details className="pos-order-discount" name={optionsGroup}>
+            <summary>
+              <span>{discount ? `Discount ${discount}%` : 'Add discount'}</span>
+              <ChevronDown size={17} />
+            </summary>
+            <div className="pos-order-option-panel pos-discount-fields">
+              <label>
+                Preset
+                <select
+                  value={discount}
+                  onChange={(e) => onDiscount(Number(e.target.value))}
+                  aria-label="Order discount"
+                >
+                  <option value="0">No discount</option>
+                  {discounts
+                    .filter((d) => d.active && Number(d.percent) <= limit)
+                    .map((d) => (
+                      <option key={d.id} value={Number(d.percent)}>
+                        {d.name} ({Number(d.percent)}%)
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label>
+                Percent
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  aria-label="Custom discount percent"
+                  min="0"
+                  max={limit}
+                  step="0.5"
+                  value={discount}
+                  onChange={(e) => onDiscount(Math.min(limit, Math.max(0, Number(e.target.value))))}
+                />
+              </label>
+            </div>
+          </details>
         </div>
         <div className="pos-order-total">
-          <div>
-            <span>Total amount</span>
-            <small>
-              {count} {count === 1 ? 'item' : 'items'} in this order
-            </small>
-          </div>
+          <span>Total</span>
           <strong>{m(totals.total)}</strong>
         </div>
         <Button className="checkout-button" disabled={!ready} onClick={onCharge}>

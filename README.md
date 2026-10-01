@@ -131,7 +131,7 @@ Star products for quick selection in Favorites. Favorites are saved on this brow
 
 For touchscreens, use the **1 / 2 / 5 / 10** quantity shortcuts or **Keypad** to enter a quantity with large number buttons. The first digit replaces the existing quantity; Clear and Backspace let you correct it. Each current-order item also has a Keypad action for changing its total quantity within available stock. Keyboard entry and barcode scanning remain available.
 
-On desktop, the product catalog and order items scroll separately while the order total and Charge button stay visible. On mobile and smaller tablets, **View order** opens the order panel; **Continue shopping** closes it while keeping the cart. Quantity, customer, and discount selections persist when switching between these layouts.
+On desktop, a compact search and quantity toolbar leaves more room for the product catalog and order items. Both lists scroll separately while the total and Charge button stay visible. Expand **Order details** for the subtotal and tax breakdown, or **Discount** to change the order discount. On mobile and smaller tablets, **View order** opens the order panel; **Continue shopping** closes it while keeping the cart. Quantity, customer, and discount selections persist when switching between these layouts.
 
 ### Customer returns
 

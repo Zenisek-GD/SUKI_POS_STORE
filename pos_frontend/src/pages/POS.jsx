@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search,
-  ScanBarcode,
   Plus,
   Keyboard,
   ShoppingBag,
@@ -16,7 +15,6 @@ import {
 import { useStore } from '../lib/storeContext';
 import { api, cash } from '../lib/api';
 import {
-  PageHeader,
   Button,
   ProductAvatar,
   Empty,
@@ -71,6 +69,7 @@ export default function POS() {
     [enteredQuantity, setEnteredQuantity] = useState('1'),
     [findProduct, setFindProduct] = useState(false),
     [addError, setAddError] = useState(''),
+    [addAnnouncement, setAddAnnouncement] = useState(''),
     [quantityTarget, setQuantityTarget] = useState(null),
     [orderOpen, setOrderOpen] = useState(false),
     [mobileOrder, setMobileOrder] = useState(() => window.matchMedia('(max-width: 900px)').matches);
@@ -144,10 +143,13 @@ export default function POS() {
   );
   const add = (p) => {
     try {
-      setCart(cartAfterAdding(cart, p, enteredQuantity));
+      const nextCart = cartAfterAdding(cart, p, enteredQuantity);
+      setCart(nextCart);
       setEnteredQuantity('1');
       setAddError('');
-      notify(`Added ${Number(enteredQuantity)} ${p.unit} of ${p.name}.`);
+      setAddAnnouncement(
+        `Added ${Number(enteredQuantity)} ${p.unit} of ${p.name}. ${nextCart.reduce((sum, item) => sum + item.quantity, 0)} items in order.`,
+      );
       return true;
     } catch (error) {
       setAddError(error.message);
@@ -231,22 +233,38 @@ export default function POS() {
   );
   return (
     <>
-      <PageHeader
-        eyebrow="YOUR COUNTER, SIMPLIFIED"
-        title="Point of sale"
-        description="Choose a quantity. Add your products. Ready to serve."
-      >
-        <span className="register-status">
-          <i />
-          Register open
-        </span>
-      </PageHeader>
+      <h1 className="pos-sr-only">Point of sale</h1>
+      <span className="pos-sr-only" role="status">
+        {addAnnouncement}
+      </span>
       <div className="pos-layout touch-pos">
         <section className="product-picker">
           <div className="pos-catalog-tools">
+            <div className="pos-search-row">
+              <div className="pos-search">
+                <Search size={20} />
+                <input
+                  ref={search}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={scan}
+                  aria-label="Search or scan a product"
+                  placeholder="Search or scan a product"
+                />
+                <kbd>F2</kbd>
+              </div>
+              <Button
+                variant="secondary"
+                className="pos-find-button"
+                onClick={() => setFindProduct(true)}
+              >
+                <Search size={19} />
+                Find Product
+              </Button>
+            </div>
             <div className="pos-entry-controls">
               <div className="pos-quantity-entry">
-                <label htmlFor="next-product-quantity">Quantity for next product</label>
+                <label htmlFor="next-product-quantity">Qty</label>
                 <div className="pos-quantity-input">
                   <input
                     id="next-product-quantity"
@@ -266,67 +284,39 @@ export default function POS() {
                       }
                     }}
                   />
-                  <button type="button" onClick={openQuantity} aria-label="Open quantity keypad">
+                  <button
+                    type="button"
+                    onClick={openQuantity}
+                    aria-label="Open quantity keypad"
+                    title="Set quantity using keypad"
+                  >
                     <Keyboard size={21} />
-                    <span>Keypad</span>
                   </button>
                 </div>
               </div>
-              <Button
-                variant="secondary"
-                className="pos-find-button"
-                onClick={() => setFindProduct(true)}
-              >
-                <Search size={20} />
-                Find Product
-              </Button>
+              <div className="pos-quick-quantity" aria-label="Quick quantities">
+                {[1, 2, 5, 10].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-label={`Set quantity to ${value}`}
+                    aria-pressed={Number(enteredQuantity) === value}
+                    onClick={() => {
+                      setEnteredQuantity(String(value));
+                      setAddError('');
+                    }}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="pos-quick-quantity" aria-label="Quick quantities">
-              <span>Quick quantity</span>
-              {[1, 2, 5, 10].map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-label={`Set quantity to ${value}`}
-                  aria-pressed={Number(enteredQuantity) === value}
-                  onClick={() => {
-                    setEnteredQuantity(String(value));
-                    setAddError('');
-                  }}
-                >
-                  {value}
-                </button>
-              ))}
-              <small>Resets to 1 after adding</small>
-            </div>
-            <div className="pos-search">
-              <Search size={20} />
-              <input
-                ref={search}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={scan}
-                aria-label="Search or scan a product"
-                placeholder="Search products, SKU, or scan a barcode…"
-              />
-              <kbd>F2</kbd>
-              <ScanBarcode size={23} />
-            </div>
-            <p className="pos-entry-help">
-              Enter a quantity, then scan or enter an exact barcode, SKU, or product code. Press
-              Enter to add.
-            </p>
             {addError && <ErrorState message={addError} />}
           </div>
           <div className="pos-catalog-products">
-            <section className="pos-favorites" aria-label="Favorite products">
-              <div className="pos-favorites-heading">
-                <h2>
-                  <Star size={15} /> Favorites
-                </h2>
-                <button onClick={() => setFindProduct(true)}>Manage favorites</button>
-              </div>
-              {favoriteProducts.length ? (
+            {!!favoriteProducts.length && (
+              <section className="pos-favorites" aria-label="Favorite products">
+                <Star size={17} aria-hidden="true" />
                 <div className="pos-favorite-buttons">
                   {favoriteProducts.map((p) => (
                     <button
@@ -340,10 +330,8 @@ export default function POS() {
                     </button>
                   ))}
                 </div>
-              ) : (
-                <p>Star products in Find Product for quick access on this device.</p>
-              )}
-            </section>
+              </section>
+            )}
             <div className="category-tabs">
               <button
                 className={category === 'all' ? 'active' : ''}
@@ -383,7 +371,6 @@ export default function POS() {
                       {p.stock === 0 && <span className="sold-out-label">Out of stock</span>}
                     </div>
                     <div className="product-card-body">
-                      <small>{p.category || 'Uncategorized'}</small>
                       <h3>{p.name}</h3>
                       <div>
                         <strong>{m(p.price)}</strong>
@@ -408,10 +395,6 @@ export default function POS() {
             {!shown.length && (
               <Empty title="No products found" text="Try another product name, SKU, or barcode." />
             )}
-            <p className="picker-help">
-              <ScanBarcode size={16} />
-              Barcode scanners work like a keyboard. Focus the search field and scan.
-            </p>
           </div>
         </section>
         {!mobileOrder && (

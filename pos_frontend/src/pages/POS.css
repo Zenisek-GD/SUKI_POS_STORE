@@ -17,49 +17,27 @@
 .pos-entry-controls .btn {
   flex-shrink: 0;
 }
-.pos-entry-help {
-  font-size: 11px;
-  line-height: 1.6;
-  color: #697862;
-  margin: 9px 0 15px;
-}
 .pos-favorites {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   background: #f3f6ed;
-  padding: 13px;
+  padding: 6px 10px;
   border: 1px solid #e2e9d8;
   border-radius: 9px;
 }
-.pos-favorites-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.pos-favorites-heading h2 {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0;
-  font-size: 13px;
-}
-.pos-favorites-heading button {
-  font-size: 11px;
-  color: #3d6036;
-  text-decoration: underline;
-}
-.pos-favorites > p {
-  margin: 8px 0 0;
-  font-size: 11px;
-  color: #697862;
-  line-height: 1.5;
+.pos-favorites > svg {
+  flex-shrink: 0;
+  color: #6d8058;
 }
 .pos-favorite-buttons {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
-  margin-top: 11px;
+  min-width: 0;
+  overflow-x: auto;
 }
 .pos-favorite-buttons button {
+  flex-shrink: 0;
   padding: 8px 10px;
   display: flex;
   flex-wrap: wrap;
@@ -124,11 +102,21 @@
 
 /* Touch register: catalog and order scroll separately; payment stays visible. */
 .main-content.pos-main {
-  padding: 22px 24px;
+  padding: 14px 16px;
+}
+.pos-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .pos-main .pos-layout.touch-pos {
   grid-template-columns: minmax(0, 1fr) clamp(340px, 28vw, 410px);
-  gap: 22px;
+  gap: 16px;
   align-items: stretch;
   min-height: 0;
 }
@@ -156,13 +144,31 @@
   overscroll-behavior: contain;
   scrollbar-width: thin;
 }
+.pos-search-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.pos-search-row .pos-search {
+  flex: 1;
+  min-width: 0;
+  padding: 0 12px;
+}
+.pos-search-row .pos-search > svg {
+  flex-shrink: 0;
+}
 .touch-pos .pos-entry-controls {
-  align-items: flex-end;
-  gap: 12px;
-  margin-bottom: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 .pos-quantity-entry {
-  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
   min-width: 0;
 }
 .pos-quantity-entry > label {
@@ -170,33 +176,33 @@
   font-size: 12px;
   font-weight: 600;
   color: #47634e;
-  margin-bottom: 7px;
+  margin: 0;
 }
 .pos-quantity-input {
   display: flex;
   align-items: stretch;
   border: 1px solid #c9d8c5;
-  border-radius: 11px;
+  border-radius: 8px;
   background: white;
   overflow: hidden;
 }
 .pos-quantity-input > input {
-  width: 70px;
+  width: 60px;
   min-width: 0;
-  flex: 1;
-  height: 52px;
+  height: 44px;
   border: 0;
   border-radius: 0;
   text-align: center;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   color: #244d38;
   padding: 6px;
   appearance: textfield;
 }
 .pos-quantity-input > button {
-  min-height: 52px;
-  padding: 0 14px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 10px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -207,25 +213,22 @@
   border-left: 1px solid #d7e3d1;
 }
 .touch-pos .pos-find-button {
-  min-height: 54px;
-  padding: 0 16px;
-  border-radius: 11px;
+  min-height: 46px;
+  padding: 0 12px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  font-size: 13px;
 }
 .pos-quick-quantity {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.pos-quick-quantity > span,
-.pos-quick-quantity > small {
-  font-size: 11px;
-  color: #697963;
+  gap: 5px;
+  margin: 0;
 }
 .pos-quick-quantity > button {
   min-height: 44px;
-  min-width: 46px;
+  min-width: 44px;
   border: 1px solid #d9e3d1;
   border-radius: 9px;
   background: white;
@@ -238,14 +241,10 @@
   border-color: #28573f;
   color: white;
 }
-.pos-quick-quantity > small {
-  flex-basis: 100%;
-}
 .touch-pos .pos-search input {
-  min-height: 46px;
+  min-height: 44px;
   font-size: 16px;
 }
-.touch-pos .pos-favorites-heading button,
 .touch-pos .category-tabs button,
 .touch-pos .pos-favorite-buttons button,
 .pos-find-product .pos-favorite-toggle,
@@ -253,14 +252,40 @@
   min-height: 44px;
 }
 .touch-pos .product-grid {
-  grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  padding-bottom: 8px;
+}
+.touch-pos .category-tabs {
+  padding: 2px 0 10px;
+}
+.touch-pos .pos-favorites + .category-tabs {
+  padding-top: 8px;
+}
+.touch-pos .product-image {
+  height: 74px;
+  margin: 6px 6px 0;
+}
+.touch-pos .product-image .product-avatar > span {
+  font-size: 44px;
+}
+.touch-pos .product-card-body {
+  padding: 8px 10px;
 }
 .touch-pos .product-card h3 {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.4;
   height: auto;
-  min-height: 40px;
+  min-height: 36px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.touch-pos .product-card-body > div {
+  margin-top: 4px;
+}
+.touch-pos .stock-hint {
+  margin-top: 3px;
 }
 .touch-pos .product-card-body > small,
 .touch-pos .stock-hint {
@@ -623,15 +648,15 @@
   padding-bottom: max(18px, env(safe-area-inset-bottom));
 }
 @media (min-width: 901px) {
+  .main-wrap:has(.touch-pos) > .topbar {
+    height: 56px;
+    min-height: 56px;
+  }
   .main-content.pos-main {
-    height: calc(100dvh - 76px);
+    height: calc(100dvh - 56px);
     flex: none;
     display: flex;
     flex-direction: column;
-  }
-  .pos-main > .page-heading {
-    flex-shrink: 0;
-    margin-bottom: 20px;
   }
   .pos-main .touch-pos {
     flex: 1;
@@ -646,7 +671,7 @@
 }
 @media (max-width: 1100px) and (min-width: 901px) {
   .pos-main .pos-layout.touch-pos {
-    gap: 14px;
+    gap: 12px;
     grid-template-columns: minmax(0, 1fr) 340px;
   }
   .touch-pos .pos-entry-controls {
@@ -672,7 +697,7 @@
     font-size: 16px;
   }
   .main-content.pos-main {
-    padding: 20px 16px calc(100px + env(safe-area-inset-bottom));
+    padding: 12px 12px calc(90px + env(safe-area-inset-bottom));
   }
   .pos-main .pos-layout.touch-pos {
     grid-template-columns: minmax(0, 1fr);
@@ -683,9 +708,6 @@
   .touch-pos .pos-catalog-tools,
   .touch-pos .pos-catalog-products {
     padding-right: 0;
-  }
-  .touch-pos .product-grid {
-    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
   }
   .mobile-cart-shortcut.pos-touch-cart-shortcut {
     display: flex;
