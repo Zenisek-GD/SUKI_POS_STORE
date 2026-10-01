@@ -93,6 +93,9 @@ export default function EntityForm({ title, entity, record, fields, onClose, onS
               ) : (
                 <input
                   type={f.type === 'money' ? 'number' : f.type || 'text'}
+                  inputMode={
+                    f.type === 'money' ? 'decimal' : f.type === 'number' ? 'numeric' : undefined
+                  }
                   value={values[f.key] ?? ''}
                   min={f.min ?? (['number', 'money'].includes(f.type) ? 0 : undefined)}
                   max={f.max}

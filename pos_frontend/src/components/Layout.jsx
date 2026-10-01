@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingBag, LogOut, Menu, X, ChevronDown, Bell, Search, Store } from 'lucide-react';
 import { useStore } from '../lib/storeContext';
@@ -18,9 +18,58 @@ export const Brand = () => (
 export default function Layout() {
   const { user, data, logout } = useStore(),
     [open, setOpen] = useState(false),
+    [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 900px)').matches),
     [query, setQuery] = useState(''),
     navigate = useNavigate(),
     location = useLocation();
+  const sidebar = useRef(null);
+  const menu = useRef(null);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 900px)');
+    const resize = () => {
+      setMobile(media.matches);
+      setOpen(false);
+    };
+    media.addEventListener('change', resize);
+    return () => media.removeEventListener('change', resize);
+  }, []);
+  useEffect(() => {
+    if (!mobile || !open) return;
+    const node = sidebar.current;
+    const trigger = menu.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    node.scrollTop = 0;
+    const controls = () => [...node.querySelectorAll('a[href], button:not(:disabled)')];
+    controls()[0]?.focus({ preventScroll: true });
+    const handleKey = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setOpen(false);
+      }
+      if (event.key === 'Tab') {
+        const items = controls();
+        const first = items[0],
+          last = items.at(-1);
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKey);
+      if (window.matchMedia('(max-width: 900px)').matches) trigger?.focus({ preventScroll: true });
+    };
+  }, [mobile, open]);
   const nav = navigation.filter((n) => n.roles.includes(user.role));
   const current = navigation.find((n) => n.path === location.pathname);
   const low = data.products.filter(
@@ -33,14 +82,24 @@ export default function Layout() {
     .join('');
   return (
     <div className="app-shell">
-      {open && (
+      {mobile && open && (
         <button
           className="sidebar-backdrop"
-          aria-label="Close navigation"
+          aria-hidden="true"
+          tabIndex={-1}
           onClick={() => setOpen(false)}
         />
       )}
-      <aside className={`sidebar ${open ? 'open' : ''}`}>
+      <aside
+        ref={sidebar}
+        id="store-navigation"
+        className={`sidebar ${open ? 'open' : ''}`}
+        inert={mobile && !open}
+        aria-hidden={mobile && !open ? true : undefined}
+        role={mobile ? 'dialog' : undefined}
+        aria-modal={mobile && open ? true : undefined}
+        aria-label="Store navigation"
+      >
         <div className="sidebar-brand">
           <Brand />
           <button
@@ -95,13 +154,16 @@ export default function Layout() {
           </span>
         </div>
       </aside>
-      <div className="main-wrap">
+      <div className="main-wrap" inert={mobile && open}>
         <header className="topbar">
           <div className="breadcrumbs">
             <button
+              ref={menu}
               className="icon-button mobile-only"
               onClick={() => setOpen(true)}
               aria-label="Open navigation"
+              aria-expanded={open}
+              aria-controls="store-navigation"
             >
               <Menu />
             </button>

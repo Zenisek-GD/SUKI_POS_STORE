@@ -133,6 +133,7 @@ export default function Inventory() {
         {tab === 'stock' ? (
           <Table
             rows={filtered}
+            mobileColumns={['stock', 'status']}
             onRowClick={setHistory}
             columns={[
               {
@@ -198,6 +199,7 @@ export default function Inventory() {
         ) : (
           <Table
             rows={moveRows}
+            mobileColumns={['type', 'quantity', 'new_quantity', 'created_at']}
             columns={[
               { key: 'product', label: 'Product' },
               {
@@ -307,6 +309,7 @@ function StockForm({ products, initial, onClose, onSave }) {
           <Field label="Quantity">
             <input
               type="number"
+              inputMode="numeric"
               min="1"
               max="1000000"
               step="1"

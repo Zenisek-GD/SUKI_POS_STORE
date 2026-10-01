@@ -106,6 +106,7 @@ export function People({ entity }) {
         </div>
         <Table
           rows={rows}
+          mobileColumns={customer ? ['phone', 'total_spent'] : ['phone', 'product_count']}
           columns={[
             {
               key: 'name',
@@ -365,6 +366,7 @@ export function Expenses() {
         </div>
         <Table
           rows={rows}
+          mobileColumns={['category', 'expense_date', 'amount']}
           columns={[
             {
               key: 'description',
@@ -480,6 +482,7 @@ export function Purchases() {
         </div>
         <Table
           rows={rows}
+          mobileColumns={['supplier', 'total', 'payment_status', 'receiving_status']}
           columns={[
             {
               key: 'number',
@@ -667,26 +670,34 @@ function PurchaseForm({ onClose }) {
                       </option>
                     ))}
                 </select>
-                <input
-                  aria-label={`Quantity ${index + 1}`}
-                  type="number"
-                  min="1"
-                  max="1000000"
-                  step="1"
-                  value={item.quantity}
-                  onChange={(e) => update(index, 'quantity', e.target.value)}
-                  required
-                />
-                <input
-                  aria-label={`Unit cost ${index + 1}`}
-                  type="number"
-                  min="0"
-                  max="1000000"
-                  step=".01"
-                  value={item.cost_price}
-                  onChange={(e) => update(index, 'cost_price', e.target.value)}
-                  required
-                />
+                <label className="purchase-line-field">
+                  <span>Quantity</span>
+                  <input
+                    aria-label={`Quantity ${index + 1}`}
+                    type="number"
+                    inputMode="numeric"
+                    min="1"
+                    max="1000000"
+                    step="1"
+                    value={item.quantity}
+                    onChange={(e) => update(index, 'quantity', e.target.value)}
+                    required
+                  />
+                </label>
+                <label className="purchase-line-field">
+                  <span>Unit cost</span>
+                  <input
+                    aria-label={`Unit cost ${index + 1}`}
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    max="1000000"
+                    step=".01"
+                    value={item.cost_price}
+                    onChange={(e) => update(index, 'cost_price', e.target.value)}
+                    required
+                  />
+                </label>
                 <button
                   type="button"
                   className="icon-button"
@@ -906,6 +917,7 @@ export function Team() {
         </div>
         <Table
           rows={rows}
+          mobileColumns={['role', 'active']}
           columns={[
             {
               key: 'name',
@@ -1016,6 +1028,7 @@ export function Audit() {
         ) : (
           <Table
             rows={rows}
+            mobileColumns={['user_name', 'action']}
             columns={[
               {
                 key: 'created_at',

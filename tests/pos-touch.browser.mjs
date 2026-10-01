@@ -265,12 +265,62 @@ try {
   );
 
   const viewOrder = page.getByRole('button', { name: 'View current order', exact: true });
+  const filterCategory = await one(
+    db,
+    `SELECT c.id, c.name FROM categories c
+     WHERE c.store_id=$1 AND EXISTS (
+       SELECT 1 FROM products p WHERE p.category_id=c.id AND p.active=true
+     ) ORDER BY c.name LIMIT 1`,
+    [store.id],
+  );
+  const categoryProducts = (
+    await db.query(
+      'SELECT name FROM products WHERE store_id=$1 AND category_id=$2 AND active=true ORDER BY name',
+      [store.id, filterCategory.id],
+    )
+  ).rows.map((product) => product.name);
+  const catalogCount = await page.locator('.product-card').count();
   for (const viewport of [
     { width: 390, height: 844 },
+    { width: 360, height: 800 },
     { width: 320, height: 640 },
+    { width: 280, height: 640 },
   ]) {
     await page.setViewportSize(viewport);
     await expect(viewOrder).toBeInViewport();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const presets = page.locator('.pos-entry-controls .pos-quick-quantity > button');
+    const firstPreset = await presets.first().boundingBox();
+    for (const preset of await presets.all()) {
+      await assertFullyVisible(preset, page.locator('.pos-entry-controls'));
+      const bounds = await preset.boundingBox();
+      expect(Math.abs(bounds.y - firstPreset.y), 'quantity shortcuts share one row').toBeLessThan(
+        1,
+      );
+      expect(bounds.width, 'quantity shortcut width').toBeGreaterThanOrEqual(44);
+      expect(bounds.height, 'quantity shortcut height').toBeGreaterThanOrEqual(44);
+    }
+    await assertFullyVisible(quantity, page.locator('.pos-entry-controls'));
+    await assertFullyVisible(
+      page.getByRole('button', { name: 'Open quantity keypad', exact: true }),
+      page.locator('.pos-entry-controls'),
+    );
+    const quantityBounds = await quantity.boundingBox();
+    if (viewport.width >= 320)
+      expect(
+        Math.abs(quantityBounds.y - firstPreset.y),
+        'quantity entry shares the preset row',
+      ).toBeLessThanOrEqual(1);
+    else
+      expect(
+        quantityBounds.y + quantityBounds.height,
+        'narrow quantity entry wraps above presets',
+      ).toBeLessThanOrEqual(firstPreset.y);
+    await assertFullyVisible(scan, page.locator('.pos-search-row'));
+    await assertFullyVisible(
+      page.getByRole('button', { name: 'Find Product', exact: true }),
+      page.locator('.pos-search-row'),
+    );
     await expect
       .poll(() =>
         page.locator('.sidebar').evaluate((element) => element.getBoundingClientRect().right),
@@ -279,6 +329,70 @@ try {
     await assertNoOverflow();
     if (viewport.width === 390)
       await page.screenshot({ path: 'test-results/pos-compact-mobile.png', fullPage: false });
+    if (viewport.width === 280)
+      await page.screenshot({ path: 'test-results/pos-narrow-mobile.png', fullPage: false });
+
+    const categoryTabs = page.locator('.category-tabs');
+    const allProducts = categoryTabs.getByRole('button', { name: /^All products/ });
+    const categoryFilter = categoryTabs.getByRole('button', {
+      name: filterCategory.name,
+      exact: true,
+    });
+    await expect(allProducts).toHaveAttribute('aria-pressed', 'true');
+    await categoryFilter.tap();
+    await expect(categoryFilter).toHaveAttribute('aria-pressed', 'true');
+    await expect(allProducts).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('.product-card h3')).toHaveText(categoryProducts);
+    await scan.fill(categoryProducts[0]);
+    await expect(page.locator('.product-card')).toHaveCount(1);
+    const clearSearch = page.getByRole('button', { name: 'Clear search', exact: true });
+    await assertFullyVisible(clearSearch, page.locator('.pos-search-row'));
+    await clearSearch.tap();
+    await expect(scan).toHaveValue('');
+    await expect(page.locator('.product-card h3')).toHaveText(categoryProducts);
+    await expect(categoryFilter).toHaveAttribute('aria-pressed', 'true');
+    await scan.fill('no matching touch product');
+    await expect(page.locator('.product-card')).toHaveCount(0);
+    await expect(
+      page.getByRole('heading', { name: 'No products found', exact: true }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Reset filters', exact: true }).tap();
+    await expect(scan).toHaveValue('');
+    await expect(allProducts).toHaveAttribute('aria-pressed', 'true');
+    await expect(categoryFilter).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('.product-card')).toHaveCount(catalogCount);
+    await assertNoOverflow();
+
+    await page.getByRole('button', { name: 'Find Product', exact: true }).tap();
+    await findDialog
+      .getByRole('textbox', { name: 'Search name, SKU, product code, or barcode' })
+      .fill('Touch Flour');
+    await expect(findDialog.locator('.mobile-record-card')).toHaveCount(1);
+    const addFlour = findDialog.getByRole('button', {
+      name: 'Add Touch Flour to order',
+      exact: true,
+    });
+    await addFlour.scrollIntoViewIfNeeded();
+    await assertFullyVisible(addFlour, findDialog);
+    expect(
+      await addFlour.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        return element.contains(
+          document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2),
+        );
+      }),
+      'Find Product Add is not covered by the dialog footer',
+    ).toBe(true);
+    const favoriteFlour = findDialog.getByRole('button', {
+      name: 'Favorite Touch Flour',
+      exact: true,
+    });
+    await favoriteFlour.tap();
+    await expect(favoriteFlour).toHaveAttribute('aria-pressed', 'true');
+    await favoriteFlour.tap();
+    await expect(favoriteFlour).toHaveAttribute('aria-pressed', 'false');
+    await assertNoOverflow();
+    await findDialog.getByRole('button', { name: 'Back to order', exact: true }).tap();
     await page.getByRole('button', { name: 'Open quantity keypad', exact: true }).tap();
     await expect(
       keypad().getByRole('button', { name: 'Quantity digit 1', exact: true }),
@@ -317,6 +431,40 @@ try {
     await orderDialog.getByRole('button', { name: 'Close dialog', exact: true }).tap();
     await expect(orderDialog).toHaveCount(0);
   }
+
+  // Landscape must expose both ends of a long order without the totals covering the controls.
+  await page.setViewportSize({ width: 844, height: 390 });
+  await viewOrder.tap();
+  const landscapeOrder = page.locator('dialog.cart-panel');
+  const scrollContent = landscapeOrder.locator('.pos-order-content');
+  for (const row of [
+    lines.locator('.pos-order-line').first(),
+    lines.locator('.pos-order-line').last(),
+  ]) {
+    const input = row.locator('.pos-line-stepper input');
+    await input.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+    await assertFullyVisible(input, scrollContent);
+    expect(
+      await input.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        return element.contains(
+          document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2),
+        );
+      }),
+      'landscape quantity control is not covered by totals',
+    ).toBe(true);
+    await expect(charge).toBeInViewport();
+  }
+  await page.screenshot({ path: 'test-results/pos-mobile-landscape-order.png' });
+  await assertNoOverflow();
+  await landscapeOrder.getByRole('button', { name: 'Close dialog', exact: true }).tap();
+  await page.getByRole('button', { name: 'Open quantity keypad', exact: true }).tap();
+  await digits(keypad(), 2);
+  await applyQuantity(keypad());
+  await expect(quantity).toHaveValue('2');
+  console.log(
+    'PASS: phone quantity shortcuts and search fit; landscape order and keypad controls remain usable',
+  );
 
   await page.setViewportSize({ width: 390, height: 844 });
   await viewOrder.tap();

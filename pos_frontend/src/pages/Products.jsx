@@ -226,7 +226,11 @@ export default function Products() {
             </select>
           </div>
         </div>
-        <Table rows={rows} columns={columns} />
+        <Table
+          rows={rows}
+          columns={columns}
+          mobileColumns={['category', 'price', 'stock', 'active']}
+        />
       </section>
       {edit && (
         <EntityForm

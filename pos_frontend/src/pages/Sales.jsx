@@ -178,6 +178,7 @@ export default function Sales() {
         ) : (
           <Table
             rows={rows}
+            mobileColumns={['created_at', 'payment_method', 'total', 'status']}
             columns={[
               {
                 key: 'number',

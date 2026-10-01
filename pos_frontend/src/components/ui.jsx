@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useId, cloneElement, isValidElement } from 'react';
 import { X, Search, ChevronLeft, ChevronRight, PackageOpen, LoaderCircle } from 'lucide-react';
 import { titleCase } from '../lib/api';
+import './MobileRecords.css';
 export function Button({ children, variant = '', className = '', loading = false, ...props }) {
   return (
     <button
@@ -215,52 +216,135 @@ export function Table({
   pageSize = 10,
   onRowClick,
   pagination = true,
+  mobileColumns = null,
 }) {
+  const mobileEnabled = Array.isArray(mobileColumns);
+  const [mobile, setMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 590px)').matches,
+  );
+  const recordsId = useId();
+  useEffect(() => {
+    if (!mobileEnabled) return;
+    const media = window.matchMedia('(max-width: 590px)');
+    const update = () => setMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, [mobileEnabled]);
   const [page, setPage] = useState(1),
     pages = Math.max(1, Math.ceil(rows.length / pageSize)),
     current = Math.min(page, pages),
     start = (current - 1) * pageSize;
+  const visibleRows = pagination ? rows.slice(start, start + pageSize) : rows;
+  const titleColumn = columns[0];
+  const summaryColumns = columns.filter(
+    (column) =>
+      column !== titleColumn && column.key !== 'actions' && mobileColumns?.includes(column.key),
+  );
+  const detailColumns = columns.filter(
+    (column) =>
+      column !== titleColumn && column.key !== 'actions' && !mobileColumns?.includes(column.key),
+  );
+  const actionColumns = columns.filter((column) => column.key === 'actions');
+  const renderCell = (column, row) =>
+    column.render ? column.render(row) : (row[column.key] ?? '—');
+  const renderFields = (fields, row, className) => (
+    <dl className={className}>
+      {fields.map((column) => (
+        <div key={column.key} className={column.className}>
+          <dt>{column.label || titleCase(column.key)}</dt>
+          <dd>{renderCell(column, row)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
   return (
     <>
-      <div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable records">
-        <table>
-          <thead>
-            <tr>
-              {columns.map((c) => (
-                <th key={c.key} className={c.className}>
-                  {c.label || titleCase(c.key)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(pagination ? rows.slice(start, start + pageSize) : rows).map((row, i) => (
-              <tr
-                key={row.id || i}
-                onClick={() => onRowClick?.(row)}
-                className={onRowClick ? 'clickable' : ''}
-                tabIndex={onRowClick ? 0 : undefined}
-                onKeyDown={(event) => {
-                  if (
-                    onRowClick &&
-                    event.target === event.currentTarget &&
-                    ['Enter', ' '].includes(event.key)
-                  ) {
-                    event.preventDefault();
-                    onRowClick(row);
-                  }
-                }}
+      {mobileEnabled && mobile ? (
+        <div className="mobile-records" role="list" aria-label="Records">
+          {visibleRows.map((row, index) => {
+            const titleId = `${recordsId}-${index}`;
+            const title = titleColumn ? renderCell(titleColumn, row) : 'Record';
+            return (
+              <article
+                className="mobile-record-card"
+                role="listitem"
+                aria-labelledby={titleId}
+                key={row.id ?? index}
               >
+                <div className="mobile-record-title" id={titleId}>
+                  {onRowClick ? (
+                    <button
+                      className="mobile-record-open"
+                      type="button"
+                      onClick={() => onRowClick(row)}
+                    >
+                      {title}
+                    </button>
+                  ) : (
+                    title
+                  )}
+                </div>
+                {summaryColumns.length > 0 &&
+                  renderFields(summaryColumns, row, 'mobile-record-summary')}
+                {detailColumns.length > 0 && (
+                  <details className="mobile-record-details">
+                    <summary>More details</summary>
+                    {renderFields(detailColumns, row, 'mobile-record-extra')}
+                  </details>
+                )}
+                {actionColumns.length > 0 && (
+                  <div className="mobile-record-actions">
+                    {actionColumns.map((column) => (
+                      <div key={column.key}>{renderCell(column, row)}</div>
+                    ))}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable records">
+          <table>
+            <thead>
+              <tr>
                 {columns.map((c) => (
-                  <td key={c.key} className={c.className}>
-                    {c.render ? c.render(row) : (row[c.key] ?? '—')}
-                  </td>
+                  <th key={c.key} scope="col" className={c.className}>
+                    {c.label || titleCase(c.key)}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {visibleRows.map((row, i) => (
+                <tr
+                  key={row.id || i}
+                  onClick={() => onRowClick?.(row)}
+                  className={onRowClick ? 'clickable' : ''}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onKeyDown={(event) => {
+                    if (
+                      onRowClick &&
+                      event.target === event.currentTarget &&
+                      ['Enter', ' '].includes(event.key)
+                    ) {
+                      event.preventDefault();
+                      onRowClick(row);
+                    }
+                  }}
+                >
+                  {columns.map((c) => (
+                    <td key={c.key} className={c.className}>
+                      {c.render ? c.render(row) : (row[c.key] ?? '—')}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       {!rows.length && <Empty title="No records found" text={emptyText} />}
       {pagination && (
         <div className="table-footer">

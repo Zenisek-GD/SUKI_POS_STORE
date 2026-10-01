@@ -1,0 +1,185 @@
+.mobile-records {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  min-width: 0;
+}
+.mobile-records:empty {
+  padding: 0;
+}
+.mobile-record-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 8px;
+  min-width: 0;
+  border: 1px solid #e4eadc;
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+  color: #435a45;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.mobile-record-title {
+  grid-column: 1 / -1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #294f3e;
+}
+.mobile-record-title .product-cell,
+.mobile-record-title .person-cell {
+  min-width: 0;
+  width: 100%;
+  gap: 10px;
+}
+.mobile-record-title .product-cell > div,
+.mobile-record-title .person-cell > div {
+  min-width: 0;
+}
+.mobile-record-title strong,
+.mobile-record-title small,
+.mobile-record-title .transaction-number,
+.mobile-record-card .table-secondary,
+.mobile-record-card .category-chip,
+.mobile-record-card .payment-label,
+.mobile-record-card .badge {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.mobile-record-title small {
+  font-weight: 400;
+}
+.mobile-record-title .transaction-number {
+  min-height: 44px;
+  font-size: 14px;
+}
+.mobile-record-open {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  border-radius: 6px;
+}
+.mobile-record-open:focus-visible {
+  outline: 2px solid #47705c;
+  outline-offset: 4px;
+}
+.mobile-record-summary,
+.mobile-record-extra {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+  margin: 12px 0 0;
+}
+.mobile-record-summary {
+  grid-column: 1 / -1;
+}
+.mobile-record-summary > div,
+.mobile-record-extra > div {
+  min-width: 0;
+}
+.mobile-record-extra > div:only-child {
+  grid-column: 1 / -1;
+}
+.mobile-record-card dt {
+  margin-bottom: 4px;
+  color: #74816f;
+  font-size: 11px;
+  font-weight: 500;
+}
+.mobile-record-card dd {
+  margin: 0;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.mobile-record-card .category-chip,
+.mobile-record-card .payment-label {
+  display: inline-block;
+  max-width: 100%;
+}
+.mobile-record-card .badge {
+  max-width: 100%;
+  height: auto;
+}
+.mobile-record-card .badge i {
+  flex-shrink: 0;
+}
+.mobile-record-details {
+  grid-column: 1 / -1;
+  margin-top: 10px;
+  border-top: 1px solid #edf1e6;
+}
+.mobile-record-details > summary {
+  min-height: 44px;
+  padding: 10px 0;
+  align-content: center;
+  color: #456d48;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+.mobile-record-extra {
+  margin-top: 0;
+  padding-bottom: 8px;
+}
+.mobile-record-card .record-code {
+  width: auto;
+  max-width: 100%;
+}
+.mobile-record-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #edf1e6;
+}
+.mobile-record-details + .mobile-record-actions {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.mobile-record-card:has(.mobile-record-actions) .mobile-record-details:not([open]) {
+  grid-column: 1;
+}
+.mobile-record-details:not([open]) + .mobile-record-actions {
+  grid-column: 2;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 4px;
+  border-top: 1px solid #edf1e6;
+}
+.mobile-record-actions > div,
+.mobile-record-actions .row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 100%;
+}
+.mobile-record-actions button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5ebde;
+  border-radius: 8px;
+  background: #f8faf5;
+  white-space: normal;
+}
+.mobile-records ~ .table-footer {
+  flex-wrap: wrap;
+  padding: 10px;
+  gap: 8px;
+}
+.mobile-records ~ .table-footer button {
+  min-width: 44px;
+  min-height: 44px;
+}

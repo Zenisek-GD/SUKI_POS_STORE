@@ -139,18 +139,59 @@
   font-size: 14px;
 }
 .pos-order-compact .pos-order-total > strong {
+  min-width: 0;
   font-size: 25px;
   line-height: 32px;
+  text-align: right;
+}
+.pos-order-compact .pos-order-total > span {
+  flex-shrink: 0;
 }
 .pos-order-compact .checkout-button {
   min-height: 48px;
   padding-block: 10px;
   font-size: 16px;
   border-radius: 10px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.pos-order-compact .checkout-button > svg {
+  flex-shrink: 0;
 }
 .pos-order-compact .pos-order-mobile-actions {
   margin: -4px -4px 4px;
 }
 .pos-order-sheet .pos-order-compact .pos-order-bottom {
   padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 900px) and (max-height: 520px) {
+  .modal.cart-panel.pos-order-sheet[open] {
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+  .modal.cart-panel.pos-order-sheet > header {
+    padding: 6px 12px;
+  }
+  .modal.cart-panel.pos-order-sheet > header h2 {
+    font-size: 17px;
+  }
+  .modal.cart-panel.pos-order-sheet > header p {
+    margin-top: 2px;
+  }
+  .pos-order-sheet .pos-order-content.pos-order-compact {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .pos-order-sheet .pos-order-compact .pos-order-lines {
+    flex: none;
+    min-height: 120px;
+    overflow-y: visible;
+  }
+  .pos-order-sheet .pos-order-compact .pos-order-bottom {
+    position: sticky;
+    bottom: 0;
+  }
 }

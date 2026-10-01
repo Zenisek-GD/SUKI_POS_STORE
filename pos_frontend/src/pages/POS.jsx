@@ -4,13 +4,13 @@ import {
   Search,
   Plus,
   Keyboard,
-  ShoppingBag,
   ArrowRight,
   CreditCard,
   Banknote,
   Smartphone,
   Check,
   Star,
+  X,
 } from 'lucide-react';
 import { useStore } from '../lib/storeContext';
 import { api, cash } from '../lib/api';
@@ -249,18 +249,39 @@ export default function POS() {
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={scan}
                   aria-label="Search or scan a product"
-                  placeholder="Search or scan a product"
+                  placeholder="Search or scan"
                 />
-                <kbd>F2</kbd>
+                {query ? (
+                  <button
+                    type="button"
+                    className="pos-clear-search"
+                    aria-label="Clear search"
+                    onClick={() => {
+                      setQuery('');
+                      search.current?.focus();
+                    }}
+                  >
+                    <X size={18} />
+                  </button>
+                ) : (
+                  <kbd>F2</kbd>
+                )}
               </div>
               <Button
                 variant="secondary"
                 className="pos-find-button"
+                aria-label="Find Product"
+                title="Find Product"
                 onClick={() => setFindProduct(true)}
               >
                 <Search size={19} />
-                Find Product
+                <span className="pos-find-label">Find Product</span>
+                <span className="pos-find-mobile-label">Find</span>
               </Button>
+            </div>
+            <div className="pos-quantity-caption" aria-hidden="true">
+              <span>Quantity per item</span>
+              <span>Resets after adding</span>
             </div>
             <div className="pos-entry-controls">
               <div className="pos-quantity-entry">
@@ -332,9 +353,10 @@ export default function POS() {
                 </div>
               </section>
             )}
-            <div className="category-tabs">
+            <div className="category-tabs" role="group" aria-label="Product categories">
               <button
                 className={category === 'all' ? 'active' : ''}
+                aria-pressed={category === 'all'}
                 onClick={() => setCategory('all')}
               >
                 All products <span>{products.length}</span>
@@ -343,11 +365,21 @@ export default function POS() {
                 <button
                   key={c.id}
                   className={category === c.id ? 'active' : ''}
+                  aria-pressed={category === c.id}
                   onClick={() => setCategory(c.id)}
                 >
                   {c.name}
                 </button>
               ))}
+            </div>
+            <div className="pos-catalog-heading">
+              <h2>
+                {category === 'all'
+                  ? 'Products'
+                  : data.categories.find((c) => c.id === category)?.name || 'Products'}
+                <span>{shown.length}</span>
+              </h2>
+              <span>Tap to add</span>
             </div>
             <div className="product-grid">
               {shown.map((p) => {
@@ -355,10 +387,11 @@ export default function POS() {
                 return (
                   <button
                     key={p.id}
-                    className={`product-card ${p.stock === 0 ? 'sold-out' : ''}`}
+                    className={`product-card ${p.stock === 0 ? 'sold-out' : ''} ${count ? 'is-in-cart' : ''}`}
                     disabled={p.stock === 0}
                     onClick={() => add(p)}
                     aria-label={`Add ${p.name}`}
+                    aria-describedby={`product-details-${p.id}`}
                   >
                     <div className="product-image">
                       <ProductAvatar product={p} size="large" />
@@ -366,12 +399,13 @@ export default function POS() {
                         <span className="in-cart">
                           <Check size={12} />
                           {count}
+                          <span className="pos-in-cart-label"> in order</span>
                         </span>
                       )}
                       {p.stock === 0 && <span className="sold-out-label">Out of stock</span>}
                     </div>
-                    <div className="product-card-body">
-                      <h3>{p.name}</h3>
+                    <div className="product-card-body" id={`product-details-${p.id}`}>
+                      <h3 title={p.name}>{p.name}</h3>
                       <div>
                         <strong>{m(p.price)}</strong>
                         <span className="add-circle">
@@ -393,7 +427,24 @@ export default function POS() {
               })}
             </div>
             {!shown.length && (
-              <Empty title="No products found" text="Try another product name, SKU, or barcode." />
+              <Empty
+                title="No products found"
+                text="Try another product name, SKU, or barcode."
+                action={
+                  (query || category !== 'all') && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setQuery('');
+                        setCategory('all');
+                        search.current?.focus();
+                      }}
+                    >
+                      Reset filters
+                    </Button>
+                  )
+                }
+              />
             )}
           </div>
         </section>
@@ -408,22 +459,28 @@ export default function POS() {
         )}
       </div>
       {mobileOrder && (
-        <button
-          type="button"
-          className="mobile-cart-shortcut pos-touch-cart-shortcut"
-          aria-label="View current order"
-          onClick={() => setOrderOpen(true)}
-        >
-          <span className="pos-shortcut-count">
-            <ShoppingBag size={20} />
-            <b>{itemCount}</b>
-          </span>
-          <span>
-            View order<small>{items.length} products</small>
-          </span>
-          <strong>{m(total)}</strong>
-          <ArrowRight size={21} />
-        </button>
+        <div className="pos-mobile-checkout">
+          <div className="pos-mobile-total" id="mobile-order-total">
+            <span>Order total</span>
+            <strong>{m(total)}</strong>
+          </div>
+          <button
+            type="button"
+            className="mobile-cart-shortcut pos-touch-cart-shortcut"
+            aria-label="View current order"
+            aria-describedby="mobile-order-total mobile-order-count"
+            onClick={() => setOrderOpen(true)}
+          >
+            <span className="pos-shortcut-count" aria-hidden="true">
+              {itemCount}
+            </span>
+            <span id="mobile-order-count" className="pos-sr-only">
+              {itemCount} items in order
+            </span>
+            <span>View order</span>
+            <ArrowRight size={18} />
+          </button>
+        </div>
       )}
       {mobileOrder && orderOpen && (
         <Modal
@@ -584,28 +641,25 @@ function FindProduct({
           key={query}
           rows={rows}
           pageSize={8}
+          mobileColumns={['price', 'stock']}
           emptyText="No products match. Try another name, SKU, product code, or barcode."
           columns={[
-            {
-              key: 'favorite',
-              label: 'Favorite',
-              render: (p) => (
-                <button
-                  className={`pos-favorite-toggle ${favorites.includes(p.id) ? 'selected' : ''}`}
-                  aria-label={`Favorite ${p.name}`}
-                  aria-pressed={favorites.includes(p.id)}
-                  onClick={() => toggleFavorite(p.id)}
-                >
-                  <Star size={18} />
-                </button>
-              ),
-            },
             {
               key: 'name',
               label: 'Product',
               render: (p) => (
                 <div className="pos-find-name">
-                  <strong>{p.name}</strong>
+                  <div className="pos-find-title">
+                    <strong>{p.name}</strong>
+                    <button
+                      className={`pos-favorite-toggle ${favorites.includes(p.id) ? 'selected' : ''}`}
+                      aria-label={`Favorite ${p.name}`}
+                      aria-pressed={favorites.includes(p.id)}
+                      onClick={() => toggleFavorite(p.id)}
+                    >
+                      <Star size={18} />
+                    </button>
+                  </div>
                   <small>SKU: {p.sku}</small>
                   <small>Code: {p.product_code || 'Pending'}</small>
                   {p.barcode && <small>Barcode: {p.barcode}</small>}
@@ -626,7 +680,7 @@ function FindProduct({
               ),
             },
             {
-              key: 'add',
+              key: 'actions',
               label: 'Add',
               render: (p) => (
                 <Button
@@ -683,6 +737,7 @@ function Checkout({ total, settings, payload, onClose, onComplete }) {
     <Modal
       title="Complete payment"
       subtitle="Confirm that payment has been received before completing the sale."
+      className="pos-payment-dialog"
       onClose={() => !busy && onClose()}
     >
       <form onSubmit={submit}>
@@ -717,6 +772,7 @@ function Checkout({ total, settings, payload, onClose, onComplete }) {
                 <input
                   autoFocus
                   type="number"
+                  inputMode="decimal"
                   min={total / 100}
                   max="1000000"
                   step="0.01"
