@@ -144,6 +144,7 @@ try {
   await page.getByRole('button', { name: 'View current order', exact: true }).click();
   await expect(page.locator('.cart-panel')).toBeInViewport();
   await page.screenshot({ path: 'test-results/pos-mobile.png', fullPage: true });
+  await page.getByRole('button', { name: 'Continue shopping', exact: true }).click();
   await page.getByRole('button', { name: 'Open navigation' }).click();
   await page.getByRole('link', { name: 'Overview', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'A good day for business.' })).toBeVisible();

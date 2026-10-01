@@ -4,11 +4,9 @@ import {
   Search,
   ScanBarcode,
   Plus,
-  Minus,
-  Trash2,
+  Keyboard,
   ShoppingBag,
   ArrowRight,
-  UserRound,
   CreditCard,
   Banknote,
   Smartphone,
@@ -30,6 +28,8 @@ import {
   Table,
 } from '../components/ui';
 import Receipt from '../components/Receipt';
+import CurrentOrder from '../components/CurrentOrder';
+import QuantityKeypad from '../components/QuantityKeypad';
 import {
   cartAfterAdding,
   findScannedProduct,
@@ -70,7 +70,27 @@ export default function POS() {
     [voidItem, setVoidItem] = useState(null),
     [enteredQuantity, setEnteredQuantity] = useState('1'),
     [findProduct, setFindProduct] = useState(false),
-    [addError, setAddError] = useState('');
+    [addError, setAddError] = useState(''),
+    [quantityTarget, setQuantityTarget] = useState(null),
+    [orderOpen, setOrderOpen] = useState(false),
+    [mobileOrder, setMobileOrder] = useState(() => window.matchMedia('(max-width: 900px)').matches);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 900px)');
+    const update = (event) => {
+      setMobileOrder(event.matches);
+      if (!event.matches) setOrderOpen(false);
+    };
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+  useEffect(() => {
+    if (!mobileOrder || !orderOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileOrder, orderOpen]);
   const favoriteStorage = `suki-favorites-${user.store_id}-${user.id}`;
   const [favorites, setFavorites] = useState(() => {
     try {
@@ -141,13 +161,17 @@ export default function POS() {
       wholeQuantity(value);
     } catch (error) {
       notify(error.message, 'error');
-      return;
+      return error.message;
     }
     if (!p || value > p.stock) {
-      notify('Quantity exceeds available stock.', 'error');
-      return;
+      const message = p
+        ? `Only ${p.stock} ${p.unit} available for ${p.name}.`
+        : 'This product is no longer available.';
+      notify(message, 'error');
+      return message;
     }
     setCart((c) => c.map((i) => (i.product_id === pid ? { ...i, quantity: value } : i)));
+    return true;
   };
   const scan = (e) => {
     if (e.key === 'Enter') {
@@ -172,337 +196,261 @@ export default function POS() {
   const finish = async (sale) => {
     setReceipt(sale);
     setCheckout(false);
+    setOrderOpen(false);
     setCart([]);
     setDiscount(0);
     setCustomer('');
     key.current = crypto.randomUUID();
     await refresh().catch(() => notify('Sale saved. Reload to refresh your inventory.', 'error'));
   };
+  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const openQuantity = () => setQuantityTarget({ value: enteredQuantity });
+  const orderContent = (
+    <CurrentOrder
+      items={items}
+      customer={customer}
+      onCustomer={setCustomer}
+      discount={discount}
+      onDiscount={setDiscount}
+      user={user}
+      settings={s}
+      customers={data.customers}
+      discounts={data.discounts}
+      onQuantity={quantity}
+      onEditQuantity={(item) =>
+        setQuantityTarget({ product_id: item.product_id, value: item.quantity })
+      }
+      onVoid={setVoidItem}
+      onVoidOrder={() => setClear(true)}
+      onCharge={() => setCheckout({ idempotency_key: key.current })}
+      totals={{ subtotal, discountAmount, tax, total }}
+      ready={ready}
+      compact={mobileOrder}
+      onContinue={() => setOrderOpen(false)}
+    />
+  );
   return (
     <>
       <PageHeader
         eyebrow="YOUR COUNTER, SIMPLIFIED"
         title="Point of sale"
-        description="A new sale. Another happy suki."
+        description="Choose a quantity. Add your products. Ready to serve."
       >
         <span className="register-status">
           <i />
           Register open
         </span>
       </PageHeader>
-      <div className="pos-layout">
+      <div className="pos-layout touch-pos">
         <section className="product-picker">
-          <div className="pos-entry-controls">
-            <Field label="Quantity before adding" hint="Applies to the next product.">
-              <input
-                type="number"
-                min="1"
-                max="1000000"
-                step="1"
-                inputMode="numeric"
-                value={enteredQuantity}
-                onChange={(e) => setEnteredQuantity(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    search.current?.focus();
-                  }
-                }}
-              />
-            </Field>
-            <Button variant="secondary" onClick={() => setFindProduct(true)}>
-              <Search size={18} />
-              Find Product
-            </Button>
-          </div>
-          <div className="pos-search">
-            <Search size={20} />
-            <input
-              ref={search}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={scan}
-              aria-label="Search or scan a product"
-              placeholder="Search products, SKU, or scan a barcode…"
-            />
-            <kbd>F2</kbd>
-            <ScanBarcode size={23} />
-          </div>
-          <p className="pos-entry-help">
-            Enter a quantity, then scan or enter an exact barcode, SKU, or product code. Press Enter
-            to add.
-          </p>
-          {addError && <ErrorState message={addError} />}
-          <section className="pos-favorites" aria-label="Favorite products">
-            <div className="pos-favorites-heading">
-              <h2>
-                <Star size={15} /> Favorites
-              </h2>
-              <button onClick={() => setFindProduct(true)}>Manage favorites</button>
+          <div className="pos-catalog-tools">
+            <div className="pos-entry-controls">
+              <div className="pos-quantity-entry">
+                <label htmlFor="next-product-quantity">Quantity for next product</label>
+                <div className="pos-quantity-input">
+                  <input
+                    id="next-product-quantity"
+                    aria-label="Quantity before adding"
+                    type="number"
+                    min="1"
+                    max="1000000"
+                    step="1"
+                    inputMode="numeric"
+                    value={enteredQuantity}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setEnteredQuantity(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        search.current?.focus();
+                      }
+                    }}
+                  />
+                  <button type="button" onClick={openQuantity} aria-label="Open quantity keypad">
+                    <Keyboard size={21} />
+                    <span>Keypad</span>
+                  </button>
+                </div>
+              </div>
+              <Button
+                variant="secondary"
+                className="pos-find-button"
+                onClick={() => setFindProduct(true)}
+              >
+                <Search size={20} />
+                Find Product
+              </Button>
             </div>
-            {favoriteProducts.length ? (
-              <div className="pos-favorite-buttons">
-                {favoriteProducts.map((p) => (
+            <div className="pos-quick-quantity" aria-label="Quick quantities">
+              <span>Quick quantity</span>
+              {[1, 2, 5, 10].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-label={`Set quantity to ${value}`}
+                  aria-pressed={Number(enteredQuantity) === value}
+                  onClick={() => {
+                    setEnteredQuantity(String(value));
+                    setAddError('');
+                  }}
+                >
+                  {value}
+                </button>
+              ))}
+              <small>Resets to 1 after adding</small>
+            </div>
+            <div className="pos-search">
+              <Search size={20} />
+              <input
+                ref={search}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={scan}
+                aria-label="Search or scan a product"
+                placeholder="Search products, SKU, or scan a barcode…"
+              />
+              <kbd>F2</kbd>
+              <ScanBarcode size={23} />
+            </div>
+            <p className="pos-entry-help">
+              Enter a quantity, then scan or enter an exact barcode, SKU, or product code. Press
+              Enter to add.
+            </p>
+            {addError && <ErrorState message={addError} />}
+          </div>
+          <div className="pos-catalog-products">
+            <section className="pos-favorites" aria-label="Favorite products">
+              <div className="pos-favorites-heading">
+                <h2>
+                  <Star size={15} /> Favorites
+                </h2>
+                <button onClick={() => setFindProduct(true)}>Manage favorites</button>
+              </div>
+              {favoriteProducts.length ? (
+                <div className="pos-favorite-buttons">
+                  {favoriteProducts.map((p) => (
+                    <button
+                      key={p.id}
+                      disabled={!p.stock}
+                      onClick={() => add(p)}
+                      aria-label={`Add favorite ${p.name}`}
+                    >
+                      <span>{p.name}</span>
+                      <strong>{m(p.price)}</strong>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p>Star products in Find Product for quick access on this device.</p>
+              )}
+            </section>
+            <div className="category-tabs">
+              <button
+                className={category === 'all' ? 'active' : ''}
+                onClick={() => setCategory('all')}
+              >
+                All products <span>{products.length}</span>
+              </button>
+              {data.categories.map((c) => (
+                <button
+                  key={c.id}
+                  className={category === c.id ? 'active' : ''}
+                  onClick={() => setCategory(c.id)}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+            <div className="product-grid">
+              {shown.map((p) => {
+                const count = cart.find((i) => i.product_id === p.id)?.quantity;
+                return (
                   <button
                     key={p.id}
-                    disabled={!p.stock}
+                    className={`product-card ${p.stock === 0 ? 'sold-out' : ''}`}
+                    disabled={p.stock === 0}
                     onClick={() => add(p)}
-                    aria-label={`Add favorite ${p.name}`}
+                    aria-label={`Add ${p.name}`}
                   >
-                    <span>{p.name}</span>
-                    <strong>{m(p.price)}</strong>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p>Star products in Find Product for quick access on this device.</p>
-            )}
-          </section>
-          <div className="category-tabs">
-            <button
-              className={category === 'all' ? 'active' : ''}
-              onClick={() => setCategory('all')}
-            >
-              All products <span>{products.length}</span>
-            </button>
-            {data.categories.map((c) => (
-              <button
-                key={c.id}
-                className={category === c.id ? 'active' : ''}
-                onClick={() => setCategory(c.id)}
-              >
-                {c.name}
-              </button>
-            ))}
-          </div>
-          <div className="product-grid">
-            {shown.map((p) => {
-              const count = cart.find((i) => i.product_id === p.id)?.quantity;
-              return (
-                <button
-                  key={p.id}
-                  className={`product-card ${p.stock === 0 ? 'sold-out' : ''}`}
-                  disabled={p.stock === 0}
-                  onClick={() => add(p)}
-                  aria-label={`Add ${p.name}`}
-                >
-                  <div className="product-image">
-                    <ProductAvatar product={p} size="large" />
-                    {count && (
-                      <span className="in-cart">
-                        <Check size={12} />
-                        {count}
-                      </span>
-                    )}
-                    {p.stock === 0 && <span className="sold-out-label">Out of stock</span>}
-                  </div>
-                  <div className="product-card-body">
-                    <small>{p.category || 'Uncategorized'}</small>
-                    <h3>{p.name}</h3>
-                    <div>
-                      <strong>{m(p.price)}</strong>
-                      <span className="add-circle">
-                        <Plus size={16} />
-                      </span>
+                    <div className="product-image">
+                      <ProductAvatar product={p} size="large" />
+                      {count && (
+                        <span className="in-cart">
+                          <Check size={12} />
+                          {count}
+                        </span>
+                      )}
+                      {p.stock === 0 && <span className="sold-out-label">Out of stock</span>}
                     </div>
-                    <span
-                      className={
-                        p.stock <= Number(p.min_stock ?? s.low_stock_threshold)
-                          ? 'stock-hint low'
-                          : 'stock-hint'
-                      }
-                    >
-                      {p.stock} {p.unit} in stock
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          {!shown.length && (
-            <Empty title="No products found" text="Try another product name, SKU, or barcode." />
-          )}
-          <p className="picker-help">
-            <ScanBarcode size={16} />
-            Barcode scanners work like a keyboard. Focus the search field and scan.
-          </p>
-        </section>
-        <aside className="cart-panel" id="current-order">
-          <header>
-            <div>
-              <ShoppingBag size={21} />
-              <h2>Current order</h2>
-              <span>{cart.reduce((sum, i) => sum + i.quantity, 0)}</span>
-            </div>
-            <button
-              aria-label="Void current order"
-              title="Void current order before payment"
-              className="icon-button"
-              disabled={!cart.length}
-              onClick={() => setClear(true)}
-            >
-              <Trash2 size={18} />
-            </button>
-          </header>
-          <div className="customer-picker">
-            <UserRound size={18} />
-            <select
-              value={customer}
-              onChange={(e) => setCustomer(e.target.value)}
-              aria-label="Customer"
-            >
-              <option value="">Walk-in customer</option>
-              {data.customers?.map((c) => (
-                <option value={c.id} key={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="cart-lines">
-            {!items.length ? (
-              <Empty title="Your order starts here" text="Tap a product to add it to the order." />
-            ) : (
-              items.map((i) => (
-                <div className="cart-line" key={i.product_id}>
-                  <ProductAvatar product={i} />
-                  <div className="cart-line-main">
-                    <strong>{i.name || 'Unavailable product'}</strong>
-                    <span>
-                      {m(i.price)} / {i.unit}
-                    </span>
-                    <div className="quantity-control">
-                      <button
-                        aria-label={`Decrease ${i.name}`}
-                        onClick={() =>
-                          i.quantity === 1 ? setVoidItem(i) : quantity(i.product_id, i.quantity - 1)
+                    <div className="product-card-body">
+                      <small>{p.category || 'Uncategorized'}</small>
+                      <h3>{p.name}</h3>
+                      <div>
+                        <strong>{m(p.price)}</strong>
+                        <span className="add-circle">
+                          <Plus size={16} />
+                        </span>
+                      </div>
+                      <span
+                        className={
+                          p.stock <= Number(p.min_stock ?? s.low_stock_threshold)
+                            ? 'stock-hint low'
+                            : 'stock-hint'
                         }
                       >
-                        <Minus size={13} />
-                      </button>
-                      <input
-                        aria-label={`Quantity for ${i.name}`}
-                        type="number"
-                        min="1"
-                        step="1"
-                        max={i.stock}
-                        value={i.quantity}
-                        onChange={(e) => quantity(i.product_id, Number(e.target.value))}
-                      />
-                      <button
-                        aria-label={`Increase ${i.name}`}
-                        onClick={() => quantity(i.product_id, i.quantity + 1)}
-                      >
-                        <Plus size={13} />
-                      </button>
+                        {p.stock} {p.unit} in stock
+                      </span>
                     </div>
-                    {(!i.active || i.quantity > i.stock) && (
-                      <small className="text-danger">Product or quantity unavailable</small>
-                    )}
-                  </div>
-                  <div className="cart-line-end">
-                    <strong>{m((i.price || 0) * i.quantity)}</strong>
-                    <button
-                      aria-label={`Void ${i.name}`}
-                      title="Void item before payment"
-                      onClick={() => setVoidItem(i)}
-                    >
-                      <Trash2 size={14} />
-                      <span>Void</span>
-                    </button>
-                  </div>
-                </div>
-              ))
+                  </button>
+                );
+              })}
+            </div>
+            {!shown.length && (
+              <Empty title="No products found" text="Try another product name, SKU, or barcode." />
             )}
+            <p className="picker-help">
+              <ScanBarcode size={16} />
+              Barcode scanners work like a keyboard. Focus the search field and scan.
+            </p>
           </div>
-          <div className="cart-summary">
-            <div className="discount-row">
-              <span>Discount</span>
-              <select
-                value={discount}
-                onChange={(e) => setDiscount(Number(e.target.value))}
-                aria-label="Order discount"
-              >
-                <option value="0">No discount</option>
-                {data.discounts
-                  .filter(
-                    (d) =>
-                      d.active &&
-                      (user.role !== 'cashier' ||
-                        Number(d.percent) <= Number(s.cashier_discount_limit)),
-                  )
-                  .map((d) => (
-                    <option key={d.id} value={Number(d.percent)}>
-                      {d.name} ({Number(d.percent)}%)
-                    </option>
-                  ))}
-              </select>
-              <input
-                type="number"
-                aria-label="Custom discount percent"
-                min="0"
-                max={user.role === 'cashier' ? s.cashier_discount_limit : 100}
-                step="0.5"
-                value={discount}
-                onChange={(e) =>
-                  setDiscount(
-                    Math.min(
-                      user.role === 'cashier' ? Number(s.cashier_discount_limit) : 100,
-                      Math.max(0, Number(e.target.value)),
-                    ),
-                  )
-                }
-              />
-              <span>%</span>
-            </div>
-            <p>
-              <span>Subtotal</span>
-              <strong>{m(subtotal)}</strong>
-            </p>
-            <p>
-              <span>Discount</span>
-              <strong>−{m(discountAmount)}</strong>
-            </p>
-            <p>
-              <span>
-                Tax ({Number(s.tax_rate)}%{s.tax_inclusive ? ', included' : ''})
-              </span>
-              <strong>{m(tax)}</strong>
-            </p>
-            <div className="order-total">
-              <span>Total amount</span>
-              <strong>{m(total)}</strong>
-            </div>
-            <Button
-              className="checkout-button"
-              disabled={!ready}
-              onClick={() => setCheckout({ idempotency_key: key.current })}
-            >
-              Charge {m(total)}
-              <ArrowRight size={19} />
-            </Button>
-            <small className="cart-footnote">Inventory updates when you complete the sale.</small>
-          </div>
-        </aside>
+        </section>
+        {!mobileOrder && (
+          <aside
+            className="cart-panel pos-current-order"
+            id="current-order"
+            aria-label="Current order"
+          >
+            {orderContent}
+          </aside>
+        )}
       </div>
-      {cart.length > 0 && (
+      {mobileOrder && (
         <button
-          className="mobile-cart-shortcut"
+          type="button"
+          className="mobile-cart-shortcut pos-touch-cart-shortcut"
           aria-label="View current order"
-          onClick={() =>
-            document.getElementById('current-order')?.scrollIntoView({
-              behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-                ? 'auto'
-                : 'smooth',
-              block: 'start',
-            })
-          }
+          onClick={() => setOrderOpen(true)}
         >
-          <ShoppingBag size={19} />
-          <span>View order ? {cart.reduce((sum, i) => sum + i.quantity, 0)} items</span>
+          <span className="pos-shortcut-count">
+            <ShoppingBag size={20} />
+            <b>{itemCount}</b>
+          </span>
+          <span>
+            View order<small>{items.length} products</small>
+          </span>
           <strong>{m(total)}</strong>
-          <ArrowRight size={18} />
+          <ArrowRight size={21} />
         </button>
+      )}
+      {mobileOrder && orderOpen && (
+        <Modal
+          title="Current order"
+          subtitle={`${items.length} products · ${itemCount} items`}
+          className="cart-panel pos-order-sheet"
+          onClose={() => setOrderOpen(false)}
+        >
+          {orderContent}
+        </Modal>
       )}
       {checkout && (
         <Checkout
@@ -525,6 +473,7 @@ export default function POS() {
           currency={s.currency}
           enteredQuantity={enteredQuantity}
           setEnteredQuantity={setEnteredQuantity}
+          openQuantity={openQuantity}
           favorites={favorites}
           toggleFavorite={toggleFavorite}
           add={add}
@@ -540,6 +489,33 @@ export default function POS() {
             setReceipt(null);
             search.current?.focus();
           }}
+        />
+      )}
+      {quantityTarget && (
+        <QuantityKeypad
+          key={quantityTarget.product_id || 'next-product'}
+          value={quantityTarget.value}
+          title={quantityTarget.product_id ? 'Edit quantity' : 'Set quantity'}
+          subtitle={
+            quantityTarget.product_id
+              ? items.find((item) => item.product_id === quantityTarget.product_id)?.name
+              : 'Choose how many to add with your next scan or product selection.'
+          }
+          max={
+            quantityTarget.product_id
+              ? Math.min(
+                  products.find((p) => p.id === quantityTarget.product_id)?.stock || 0,
+                  1000000,
+                )
+              : 1000000
+          }
+          onApply={(value) => {
+            if (quantityTarget.product_id) return quantity(quantityTarget.product_id, value);
+            setEnteredQuantity(String(value));
+            setAddError('');
+            return true;
+          }}
+          onClose={() => setQuantityTarget(null)}
         />
       )}
       {clear && (
@@ -575,6 +551,7 @@ function FindProduct({
   currency,
   enteredQuantity,
   setEnteredQuantity,
+  openQuantity,
   favorites,
   toggleFavorite,
   add,
@@ -609,6 +586,15 @@ function FindProduct({
               onChange={(e) => setEnteredQuantity(e.target.value)}
             />
           </Field>
+          <Button
+            className="pos-find-keypad"
+            variant="secondary"
+            onClick={openQuantity}
+            aria-label="Open quantity keypad"
+          >
+            <Keyboard size={20} />
+            Keypad
+          </Button>
         </div>
         {error && <ErrorState message={error} />}
         <Table

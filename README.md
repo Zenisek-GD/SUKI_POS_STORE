@@ -129,6 +129,10 @@ On Point of sale, enter a positive whole-number quantity, then scan once, enter 
 
 Star products for quick selection in Favorites. Favorites are saved on this browser separately for each user and store. **Void item** and **Void order** remove uncompleted cart entries. Completed sales use the return workflow below.
 
+For touchscreens, use the **1 / 2 / 5 / 10** quantity shortcuts or **Keypad** to enter a quantity with large number buttons. The first digit replaces the existing quantity; Clear and Backspace let you correct it. Each current-order item also has a Keypad action for changing its total quantity within available stock. Keyboard entry and barcode scanning remain available.
+
+On desktop, the product catalog and order items scroll separately while the order total and Charge button stay visible. On mobile and smaller tablets, **View order** opens the order panel; **Continue shopping** closes it while keeping the cart. Quantity, customer, and discount selections persist when switching between these layouts.
+
 ### Customer returns
 
 1. Open **Transactions → Find sale for return**, and enter the original receipt number. A transaction row also has a Return action.

@@ -121,3 +121,670 @@
     padding: 15px;
   }
 }
+
+/* Touch register: catalog and order scroll separately; payment stays visible. */
+.main-content.pos-main {
+  padding: 22px 24px;
+}
+.pos-main .pos-layout.touch-pos {
+  grid-template-columns: minmax(0, 1fr) clamp(340px, 28vw, 410px);
+  gap: 22px;
+  align-items: stretch;
+  min-height: 0;
+}
+.main-wrap:has(.touch-pos) > .app-footer {
+  display: none;
+}
+.touch-pos button,
+.pos-current-order button,
+.pos-order-sheet button {
+  touch-action: manipulation;
+}
+.touch-pos .product-picker {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.pos-catalog-tools {
+  flex-shrink: 0;
+  padding-right: 6px;
+}
+.pos-catalog-products {
+  min-height: 0;
+  padding-right: 6px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.touch-pos .pos-entry-controls {
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.pos-quantity-entry {
+  flex: 1;
+  min-width: 0;
+}
+.pos-quantity-entry > label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #47634e;
+  margin-bottom: 7px;
+}
+.pos-quantity-input {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid #c9d8c5;
+  border-radius: 11px;
+  background: white;
+  overflow: hidden;
+}
+.pos-quantity-input > input {
+  width: 70px;
+  min-width: 0;
+  flex: 1;
+  height: 52px;
+  border: 0;
+  border-radius: 0;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #244d38;
+  padding: 6px;
+  appearance: textfield;
+}
+.pos-quantity-input > button {
+  min-height: 52px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ecf2e8;
+  color: #345b40;
+  font-size: 13px;
+  font-weight: 600;
+  border-left: 1px solid #d7e3d1;
+}
+.touch-pos .pos-find-button {
+  min-height: 54px;
+  padding: 0 16px;
+  border-radius: 11px;
+}
+.pos-quick-quantity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.pos-quick-quantity > span,
+.pos-quick-quantity > small {
+  font-size: 11px;
+  color: #697963;
+}
+.pos-quick-quantity > button {
+  min-height: 44px;
+  min-width: 46px;
+  border: 1px solid #d9e3d1;
+  border-radius: 9px;
+  background: white;
+  font-weight: 650;
+  font-size: 15px;
+  color: #466243;
+}
+.pos-quick-quantity > button[aria-pressed='true'] {
+  background: #28573f;
+  border-color: #28573f;
+  color: white;
+}
+.pos-quick-quantity > small {
+  flex-basis: 100%;
+}
+.touch-pos .pos-search input {
+  min-height: 46px;
+  font-size: 16px;
+}
+.touch-pos .pos-favorites-heading button,
+.touch-pos .category-tabs button,
+.touch-pos .pos-favorite-buttons button,
+.pos-find-product .pos-favorite-toggle,
+.pos-find-product .btn {
+  min-height: 44px;
+}
+.touch-pos .product-grid {
+  grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+  gap: 12px;
+}
+.touch-pos .product-card h3 {
+  font-size: 14px;
+  line-height: 1.4;
+  height: auto;
+  min-height: 40px;
+}
+.touch-pos .product-card-body > small,
+.touch-pos .stock-hint {
+  font-size: 11px;
+}
+.cart-panel.pos-current-order {
+  position: relative;
+  top: auto;
+  min-height: 0;
+  height: 100%;
+  border-radius: 16px;
+  box-shadow: 0 6px 24px #203b2210;
+  display: flex;
+}
+.pos-order-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.pos-order-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 17px 18px;
+  border-bottom: 1px solid #e4ebdf;
+  flex-shrink: 0;
+}
+.pos-order-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.pos-order-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: #eff4e8;
+  border-radius: 12px;
+  color: #3b6645;
+}
+.pos-order-heading h2 {
+  font-size: 17px;
+  color: #294c37;
+}
+.pos-order-heading p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #78836f;
+}
+.pos-order-void {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  color: #9b5b4e;
+  border-radius: 8px;
+}
+.pos-order-void:hover:not(:disabled),
+.pos-line-remove:hover {
+  background: #fbefeb;
+}
+.pos-order-tools {
+  padding: 12px 16px;
+  flex-shrink: 0;
+}
+.pos-order-customer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  background: #f4f7ef;
+  border: 1px solid #e2e9db;
+  border-radius: 10px;
+  color: #687b59;
+}
+.pos-order-customer select {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  font-size: 14px;
+  min-height: 44px;
+  padding: 8px 0;
+  color: #416142;
+}
+.pos-order-lines {
+  flex: 1;
+  min-height: 60px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 0 16px 8px;
+}
+.pos-order-lines:focus-visible {
+  outline: 2px solid #609575;
+  outline-offset: -3px;
+}
+.pos-order-lines .empty {
+  padding: 26px 8px;
+}
+.pos-order-line {
+  padding: 16px 0;
+  border-bottom: 1px solid #e8eddf;
+}
+.pos-order-line:last-child {
+  border-bottom: 0;
+}
+.pos-order-product {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.pos-order-product .product-avatar {
+  width: 40px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 10px;
+}
+.pos-order-product > div {
+  flex: 1;
+  min-width: 0;
+}
+.pos-order-product h3 {
+  font-size: 14px;
+  line-height: 1.45;
+  color: #334f35;
+  overflow-wrap: anywhere;
+}
+.pos-order-product p {
+  font-size: 12px;
+  margin-top: 4px;
+  color: #7b856f;
+}
+.pos-order-product > strong {
+  color: #2d583c;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  max-width: 42%;
+}
+.pos-order-line-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.pos-line-stepper {
+  display: flex;
+  align-items: center;
+  border: 1px solid #dce5d2;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f8faf4;
+}
+.pos-line-stepper > button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: #466d43;
+}
+.pos-line-stepper > input {
+  width: 62px;
+  height: 44px;
+  border: 0;
+  border-radius: 0;
+  padding: 0 2px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 650;
+  color: #2f5238;
+  background: white;
+  appearance: textfield;
+}
+.pos-line-stepper > input::-webkit-inner-spin-button,
+.pos-quantity-input > input::-webkit-inner-spin-button {
+  display: none;
+}
+.pos-line-keypad {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid #dce5d2;
+  border-radius: 9px;
+  color: #527148;
+  font-size: 12px;
+  background: white;
+}
+.pos-line-remove {
+  min-width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  color: #9a6658;
+  border-radius: 9px;
+}
+.pos-stock-error {
+  color: #b23e36;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 10px;
+}
+.pos-order-bottom {
+  padding: 0 18px 18px;
+  background: #fcfdf9;
+  border-top: 1px solid #e1e9d7;
+  flex-shrink: 0;
+  box-shadow: 0 -5px 14px #3b583006;
+}
+.pos-order-discount > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  list-style: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #68755d;
+}
+.pos-order-discount > summary::-webkit-details-marker {
+  display: none;
+}
+.pos-order-discount > summary strong {
+  margin-left: auto;
+  color: #426341;
+  font-weight: 550;
+}
+.pos-order-discount[open] > summary > svg {
+  transform: rotate(180deg);
+}
+.pos-discount-fields {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+.pos-discount-fields label {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: #6c7b61;
+}
+.pos-discount-fields label:last-child {
+  flex: 0 0 75px;
+}
+.pos-discount-fields input,
+.pos-discount-fields select {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 5px;
+  padding: 8px;
+}
+.pos-order-totals {
+  border-top: 1px dashed #dce5d2;
+  padding-top: 8px;
+}
+.pos-order-totals p {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: #738065;
+  margin: 5px 0;
+}
+.pos-order-totals strong {
+  color: #566b46;
+  font-weight: 550;
+}
+.pos-order-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0;
+}
+.pos-order-total > div {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  color: #46663c;
+}
+.pos-order-total small {
+  font-size: 11px;
+  color: #7b896e;
+}
+.pos-order-total > strong {
+  color: #2c543b;
+  font-size: clamp(21px, 2vw, 28px);
+  font-family: 'Manrope', sans-serif;
+  letter-spacing: -0.7px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.pos-order-bottom .checkout-button {
+  min-height: 54px;
+  font-size: 16px;
+  border-radius: 11px;
+  background: #28573f;
+  border-color: #28573f;
+}
+.pos-order-mobile-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: -6px -6px 6px;
+}
+.pos-order-mobile-actions .btn {
+  min-height: 44px;
+  font-size: 13px;
+  padding: 6px;
+}
+.modal.cart-panel.pos-order-sheet {
+  position: fixed;
+  top: auto;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: min(100%, 560px);
+  max-width: 100vw;
+  height: min(840px, 96dvh);
+  max-height: 96dvh;
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  flex-direction: column;
+}
+.modal.pos-order-sheet[open] {
+  display: flex;
+}
+.modal.pos-order-sheet > header {
+  flex-shrink: 0;
+  padding: 16px 18px 12px;
+}
+.modal.pos-order-sheet > header > div {
+  display: block;
+}
+.modal.pos-order-sheet > header h2 {
+  font-size: 19px;
+  color: #2d5439;
+}
+.modal.pos-order-sheet > header p {
+  font-size: 12px;
+  margin-top: 5px;
+}
+.modal.pos-order-sheet > header .icon-button {
+  width: 44px;
+  height: 44px;
+}
+.pos-order-sheet .pos-order-bottom {
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+@media (min-width: 901px) {
+  .main-content.pos-main {
+    height: calc(100dvh - 76px);
+    flex: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .pos-main > .page-heading {
+    flex-shrink: 0;
+    margin-bottom: 20px;
+  }
+  .pos-main .touch-pos {
+    flex: 1;
+  }
+  .touch-pos .product-picker {
+    overflow: hidden;
+  }
+  .touch-pos .pos-catalog-products {
+    flex: 1;
+    overflow-y: auto;
+  }
+}
+@media (max-width: 1100px) and (min-width: 901px) {
+  .pos-main .pos-layout.touch-pos {
+    gap: 14px;
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+  .touch-pos .pos-entry-controls {
+    gap: 8px;
+  }
+  .touch-pos .pos-find-button {
+    font-size: 12px;
+    padding: 0 9px;
+    gap: 5px;
+  }
+  .touch-pos .pos-quantity-input > button span {
+    display: none;
+  }
+  .touch-pos .pos-quantity-input > button {
+    padding: 0 9px;
+  }
+}
+@media (max-width: 900px) {
+  .pos-order-customer select,
+  .pos-discount-fields input,
+  .pos-discount-fields select,
+  .pos-find-product input {
+    font-size: 16px;
+  }
+  .main-content.pos-main {
+    padding: 20px 16px calc(100px + env(safe-area-inset-bottom));
+  }
+  .pos-main .pos-layout.touch-pos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .touch-pos .product-picker {
+    display: block;
+  }
+  .touch-pos .pos-catalog-tools,
+  .touch-pos .pos-catalog-products {
+    padding-right: 0;
+  }
+  .touch-pos .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+  }
+  .mobile-cart-shortcut.pos-touch-cart-shortcut {
+    display: flex;
+    position: fixed;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: max(12px, calc((100vw - 640px) / 2));
+    right: max(12px, calc((100vw - 640px) / 2));
+    min-height: 66px;
+    padding: 12px 16px;
+    align-items: center;
+    gap: 14px;
+    background: #28573f;
+    color: white;
+    border: 1px solid #ffffff22;
+    border-radius: 15px;
+    z-index: 29;
+    box-shadow: 0 6px 25px #193f3238;
+    font-size: 14px;
+  }
+  .pos-touch-cart-shortcut > span:nth-child(2) {
+    display: grid;
+    gap: 3px;
+    text-align: left;
+  }
+  .pos-touch-cart-shortcut small {
+    color: #ccdfca;
+    font-size: 11px;
+  }
+  .pos-touch-cart-shortcut > strong {
+    margin-left: auto;
+    font-size: 18px;
+  }
+  .pos-shortcut-count {
+    position: relative;
+    padding-right: 9px;
+  }
+  .pos-shortcut-count b {
+    position: absolute;
+    top: -7px;
+    right: -6px;
+    background: #d7e8bb;
+    color: #315537;
+    border-radius: 6px;
+    min-width: 20px;
+    padding: 2px 4px;
+    font-size: 11px;
+  }
+  .pos-find-controls .pos-find-keypad {
+    min-height: 48px;
+  }
+}
+@media (max-width: 380px) {
+  .touch-pos .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .pos-quantity-input > button {
+    padding: 0 10px;
+  }
+  .pos-quantity-input > button span {
+    display: none;
+  }
+  .touch-pos .pos-find-button {
+    font-size: 13px;
+    padding: 0 10px;
+  }
+  .pos-line-keypad span {
+    display: none;
+  }
+  .pos-line-keypad {
+    min-width: 44px;
+    justify-content: center;
+  }
+}
+@media (max-height: 650px) {
+  .pos-order-heading {
+    padding: 10px 14px;
+  }
+  .pos-order-tools {
+    padding: 8px 14px;
+  }
+  .pos-order-bottom {
+    padding: 0 14px 12px;
+  }
+  .pos-order-total {
+    margin: 8px 0;
+  }
+}
+@media (max-height: 520px) {
+  .pos-order-content {
+    overflow-y: auto;
+  }
+  .pos-order-lines {
+    min-height: 140px;
+    overflow-y: visible;
+    flex: none;
+  }
+  .pos-order-bottom {
+    position: sticky;
+    bottom: 0;
+  }
+}

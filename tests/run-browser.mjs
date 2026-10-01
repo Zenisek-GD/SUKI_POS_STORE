@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 for (const file of [
   'browser.mjs',
   'checkout-browser.mjs',
+  'pos-touch.browser.mjs',
   'store-operations.browser.mjs',
   'overview-browser.mjs',
 ]) {
