@@ -97,8 +97,15 @@ test('percentage formula shows 900,000 to 780,000 as a 13.33% decrease', () => {
   });
   assert.deepEqual(percentageChange(120, 100), { percent: 20, direction: 'increase' });
   assert.deepEqual(percentageChange(100, 100), { percent: 0, direction: 'unchanged' });
-  assert.deepEqual(percentageChange(100, 0), { percent: null, direction: 'unavailable' });
-  assert.equal(percentageChange(100, 50, false).percent, null);
+  assert.deepEqual(percentageChange(0, 0), { percent: 0, direction: 'unchanged' });
+  assert.deepEqual(percentageChange(100, 0), { percent: null, direction: 'increase' });
+  assert.deepEqual(percentageChange(-100, 0), { percent: null, direction: 'decrease' });
+  assert.deepEqual(percentageChange(-50, -100), { percent: 50, direction: 'increase' });
+  assert.deepEqual(percentageChange(-150, -100), { percent: -50, direction: 'decrease' });
+  assert.deepEqual(percentageChange(100, -100), { percent: 200, direction: 'increase' });
+  assert.deepEqual(percentageChange(-100, -100), { percent: 0, direction: 'unchanged' });
+  assert.deepEqual(percentageChange(0, 0, false), { percent: null, direction: 'unavailable' });
+  assert.deepEqual(percentageChange(100, 50, false), { percent: null, direction: 'unavailable' });
 });
 
 test('yearly totals exclude voided sales and compare the preceding calendar year', async () => {
@@ -112,6 +119,70 @@ test('yearly totals exclude voided sales and compare the preceding calendar year
   assert.equal(row(overview, '2023').change_percent, -13.33);
   assert.equal(row(overview, '2023').direction, 'decrease');
   assert.equal(row(overview, '2023').transactions, 1);
+});
+
+test('current-year net sales use the full preceding year as the default baseline', async () => {
+  const f = await fixture();
+  await sale(f, '2025-01-05T00:00:00Z', 40000000);
+  await sale(f, '2025-12-05T00:00:00Z', 50000000);
+  await sale(f, '2026-01-05T00:00:00Z', 78000000);
+  const overview = await salesOverview(db, f.store, {}, new Date('2026-10-01T04:00:00Z'));
+  const current = row(overview, '2026');
+  assert.equal(overview.comparison_mode, 'full');
+  assert.match(overview.comparison_basis, /full preceding calendar/);
+  assert.equal(current.in_progress, true);
+  assert.equal(current.net_sales, 78000000);
+  assert.equal(current.comparison.period, '2025');
+  assert.equal(current.comparison.previous_net_sales, 90000000);
+  assert.equal(current.comparison.current_net_sales, current.net_sales);
+  assert.equal(current.comparison.equivalent_elapsed, false);
+  assert.equal(current.comparison.capped, false);
+  assert.equal(current.change_percent, -13.33);
+  assert.equal(current.direction, 'decrease');
+  const explicit = await salesOverview(
+    db,
+    f.store,
+    { comparison: 'full' },
+    new Date('2026-10-01T04:00:00Z'),
+  );
+  assert.deepEqual(explicit.rows, overview.rows);
+});
+
+test('yearly, monthly, and daily rows show increases, decreases, and unchanged totals', async () => {
+  const scenarios = [
+    {
+      query: {},
+      keys: ['2022', '2023', '2024', '2025'],
+      dates: ['2022-01-05', '2023-01-05', '2024-01-05', '2025-01-05'],
+    },
+    {
+      query: { year: 2025 },
+      keys: ['2025-01', '2025-02', '2025-03', '2025-04'],
+      dates: ['2025-01-05', '2025-02-05', '2025-03-05', '2025-04-05'],
+    },
+    {
+      query: { year: 2025, month: 1 },
+      keys: ['2025-01-01', '2025-01-02', '2025-01-03', '2025-01-04'],
+      dates: ['2025-01-01', '2025-01-02', '2025-01-03', '2025-01-04'],
+    },
+  ];
+  for (const { query, keys, dates } of scenarios) {
+    const f = await fixture();
+    for (const [index, total] of [90000000, 78000000, 93600000, 93600000].entries()) {
+      await sale(f, `${dates[index]}T00:00:00Z`, total);
+    }
+    const overview = await salesOverview(db, f.store, query, new Date('2026-01-02T00:00:00Z'));
+    for (const [index, percent, direction] of [
+      [1, -13.33, 'decrease'],
+      [2, 20, 'increase'],
+      [3, 0, 'unchanged'],
+    ]) {
+      const current = row(overview, keys[index]);
+      assert.equal(current.comparison.period, keys[index - 1]);
+      assert.equal(current.change_percent, percent);
+      assert.equal(current.direction, direction);
+    }
+  }
 });
 
 test('refund processing date, timezone, discounts, and year/month/day boundaries agree', async () => {
@@ -149,10 +220,61 @@ test('confirmed zero periods differ from missing and partial history', async () 
   assert.equal(row(result, '2025-06').comparison.previous_net_sales, null);
   assert.equal(row(result, '2025-07').net_sales, 0);
   assert.equal(row(result, '2025-07').comparison.previous_net_sales, 0);
-  assert.match(row(result, '2025-07').comparison.reason, /confirmed zero/);
-  assert.equal(row(result, '2025-07').change_percent, null);
+  assert.equal(row(result, '2025-07').comparison.reason, null);
+  assert.equal(row(result, '2025-07').change_percent, 0);
+  assert.equal(row(result, '2025-07').direction, 'unchanged');
   assert.equal(row(result, '2025-08').in_progress, true);
   assert.equal(row(result, '2025-09').availability, 'future');
+});
+
+test('known zero baselines and refund-only baselines preserve the numerical direction', async () => {
+  const f = await fixture();
+  const original = await sale(f, '2025-01-01T00:00:00Z', 10000);
+  await refund(f, original, '2025-01-03T00:00:00Z', 1000);
+  await refund(f, original, '2025-01-04T00:00:00Z', 500);
+  await refund(f, original, '2025-01-05T00:00:00Z', 1500);
+  await sale(f, '2025-01-08T00:00:00Z', 100);
+  const result = await salesOverview(
+    db,
+    f.store,
+    { year: 2025, month: 1 },
+    new Date('2025-02-01T00:00:00Z'),
+  );
+  assert.equal(row(result, '2025-01-03').change_percent, null);
+  assert.equal(row(result, '2025-01-03').direction, 'decrease');
+  assert.match(row(result, '2025-01-03').comparison.reason, /confirmed zero/);
+  assert.equal(row(result, '2025-01-04').change_percent, 50);
+  assert.equal(row(result, '2025-01-04').direction, 'increase');
+  assert.equal(row(result, '2025-01-05').change_percent, -200);
+  assert.equal(row(result, '2025-01-05').direction, 'decrease');
+  assert.equal(row(result, '2025-01-07').change_percent, 0);
+  assert.equal(row(result, '2025-01-07').direction, 'unchanged');
+  assert.equal(row(result, '2025-01-08').change_percent, null);
+  assert.equal(row(result, '2025-01-08').direction, 'increase');
+  assert.match(row(result, '2025-01-08').comparison.reason, /confirmed zero/);
+});
+
+test('in-progress months and days compare their totals to the full prior period by default', async () => {
+  const f = await fixture();
+  const asOf = new Date('2026-03-02T04:00:00Z'); // March 2, noon Manila.
+  await sale(f, '2026-02-02T03:00:00Z', 500);
+  await sale(f, '2026-02-28T05:00:00Z', 10000);
+  await sale(f, '2026-03-01T03:00:00Z', 100);
+  await sale(f, '2026-03-01T05:00:00Z', 1000);
+  await sale(f, '2026-03-02T03:00:00Z', 150);
+  await sale(f, '2026-03-02T05:00:00Z', 99999); // Not yet included at report time.
+  const today = row(await salesOverview(db, f.store, { year: 2026, month: 3 }, asOf), '2026-03-02');
+  assert.equal(today.net_sales, 150);
+  assert.equal(today.comparison.previous_net_sales, 1100);
+  assert.equal(today.change_percent, -86.36);
+  assert.equal(today.direction, 'decrease');
+  assert.equal(today.comparison.equivalent_elapsed, false);
+  const month = row(await salesOverview(db, f.store, { year: 2026 }, asOf), '2026-03');
+  assert.equal(month.net_sales, 1250);
+  assert.equal(month.comparison.previous_net_sales, 10500);
+  assert.equal(month.change_percent, -88.1);
+  assert.equal(month.direction, 'decrease');
+  assert.equal(month.comparison.equivalent_elapsed, false);
 });
 
 test('in-progress years, months, and days compare equivalent local calendar cutoffs', async () => {
@@ -165,16 +287,23 @@ test('in-progress years, months, and days compare equivalent local calendar cuto
   await sale(f, '2026-02-02T05:00:00Z', 10000);
   await sale(f, '2025-03-02T03:00:00Z', 2000);
   await sale(f, '2025-03-02T05:00:00Z', 99999);
-  const today = row(await salesOverview(db, f.store, { year: 2026, month: 3 }, asOf), '2026-03-02');
+  const today = row(
+    await salesOverview(db, f.store, { year: 2026, month: 3, comparison: 'elapsed' }, asOf),
+    '2026-03-02',
+  );
   assert.equal(today.net_sales, 150);
   assert.equal(today.comparison.previous_net_sales, 100);
   assert.equal(today.change_percent, 50);
   assert.equal(today.in_progress, true);
-  const month = row(await salesOverview(db, f.store, { year: 2026 }, asOf), '2026-03');
+  assert.equal(today.comparison.equivalent_elapsed, true);
+  const month = row(
+    await salesOverview(db, f.store, { year: 2026, comparison: 'elapsed' }, asOf),
+    '2026-03',
+  );
   assert.equal(month.net_sales, 1250);
   assert.equal(month.comparison.previous_net_sales, 500);
   assert.equal(month.change_percent, 150);
-  const year = row(await salesOverview(db, f.store, {}, asOf), '2026');
+  const year = row(await salesOverview(db, f.store, { comparison: 'elapsed' }, asOf), '2026');
   assert.equal(year.net_sales, 11750);
   assert.equal(year.comparison.previous_net_sales, 2000);
   assert.equal(year.change_percent, 487.5);
@@ -185,13 +314,23 @@ test('short previous months and leap years use documented comparison cutoffs', a
   await sale(f, '2026-02-27T01:00:00Z', 100);
   await sale(f, '2026-03-27T01:00:00Z', 150);
   await sale(f, '2026-03-30T01:00:00Z', 9999);
-  const result = await salesOverview(db, f.store, { year: 2026 }, new Date('2026-03-31T04:00:00Z'));
+  const asOf = new Date('2026-03-31T04:00:00Z');
+  const result = await salesOverview(db, f.store, { year: 2026, comparison: 'elapsed' }, asOf);
   assert.equal(row(result, '2026-03').comparison.previous_to, '2026-03-01 00:00:00.000');
   assert.equal(row(result, '2026-03').comparison.current_to, '2026-03-29 00:00:00.000');
   assert.equal(row(result, '2026-03').net_sales, 10149);
   assert.equal(row(result, '2026-03').comparison.current_net_sales, 150);
   assert.equal(row(result, '2026-03').change_percent, 50);
-  const leap = await salesOverview(db, f.store, {}, new Date('2024-02-29T04:00:00Z'));
+  const full = row(await salesOverview(db, f.store, { year: 2026 }, asOf), '2026-03');
+  assert.equal(full.comparison.current_net_sales, 10149);
+  assert.equal(full.comparison.current_to, '2026-03-31 12:00:00.000');
+  assert.equal(full.comparison.capped, false);
+  const leap = await salesOverview(
+    db,
+    f.store,
+    { comparison: 'elapsed' },
+    new Date('2024-02-29T04:00:00Z'),
+  );
   assert.equal(row(leap, '2024').comparison.previous_to, '2023-02-28 12:00:00.000');
   assert.equal(row(leap, '2024').comparison.current_to, '2024-02-28 12:00:00.000');
 });
@@ -330,6 +469,10 @@ test('overview route validates calendar selection and protects financial data', 
   const result = (await agent.get('/api/reports/overview?year=2026&month=1').expect(200)).body;
   assert.equal(result.level, 'days');
   assert.equal(result.rows.length, 31);
+  assert.equal(result.comparison_mode, 'full');
+  const elapsed = (await agent.get('/api/reports/overview?comparison=elapsed').expect(200)).body;
+  assert.equal(elapsed.comparison_mode, 'elapsed');
+  await agent.get('/api/reports/overview?comparison=invalid').expect(422);
   await agent.get('/api/reports/overview?month=2').expect(422);
   await agent.get('/api/reports/overview?year=2026&month=13').expect(422);
   await agent.get('/api/reports/overview?year=not-a-year').expect(422);

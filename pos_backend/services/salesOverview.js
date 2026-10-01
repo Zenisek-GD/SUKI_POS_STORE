@@ -7,10 +7,13 @@ const localDate = (value) => new Date(`${value.replace(' ', 'T')}Z`);
 const calendarDate = (year, month = 1, day = 1) => new Date(Date.UTC(year, month - 1, day));
 
 export function percentageChange(current, previous, available = true) {
-  if (!available || previous === 0) return { percent: null, direction: 'unavailable' };
+  if (!available) return { percent: null, direction: 'unavailable' };
+  const direction = current > previous ? 'increase' : current < previous ? 'decrease' : 'unchanged';
+  if (current === previous) return { percent: 0, direction };
+  if (previous === 0) return { percent: null, direction };
   return {
-    percent: Math.round(((current - previous) / previous) * 10000) / 100,
-    direction: current > previous ? 'increase' : current < previous ? 'decrease' : 'unchanged',
+    percent: Math.round(((current - previous) / Math.abs(previous)) * 10000) / 100,
+    direction,
   };
 }
 
@@ -61,7 +64,7 @@ function previousCutoff(level, start, end, now) {
   return cutoff > end ? end : cutoff;
 }
 
-function period(level, year, month, day, now, history) {
+function period(level, year, month, day, now, history, comparisonMode) {
   const start = calendarDate(year, month, day),
     next = new Date(start),
     previous = new Date(start);
@@ -78,18 +81,19 @@ function period(level, year, month, day, now, history) {
   const future = start >= now,
     inProgress = !future && next > now;
   const end = inProgress ? now : next;
-  const previousEnd = inProgress ? previousCutoff(level, previous, start, now) : start;
+  const equivalentElapsed = inProgress && comparisonMode === 'elapsed';
+  const previousEnd = equivalentElapsed ? previousCutoff(level, previous, start, now) : start;
   // If the preceding calendar period is shorter, trim only the percentage's
   // current window too. Displayed totals still include all activity to date.
   let comparisonEnd = end;
-  if (inProgress && level === 'months') {
+  if (equivalentElapsed && level === 'months') {
     const previousDays = Math.round((start - previous) / 86400000);
     if (now.getUTCDate() > previousDays) {
       comparisonEnd = new Date(start);
       comparisonEnd.setUTCDate(previousDays + 1);
     }
   } else if (
-    inProgress &&
+    equivalentElapsed &&
     level === 'years' &&
     now.getUTCMonth() === 1 &&
     now.getUTCDate() === 29 &&
@@ -130,6 +134,7 @@ function period(level, year, month, day, now, history) {
           }).format(start),
     availability,
     in_progress: inProgress,
+    equivalent_elapsed: equivalentElapsed,
     current_start: stamp(start),
     current_end: stamp(end),
     comparison_end: stamp(comparisonEnd),
@@ -142,7 +147,13 @@ function period(level, year, month, day, now, history) {
 
 export async function salesOverview(db, storeId, query = {}, asOf = new Date()) {
   const year = query.year == null ? null : Number(query.year),
-    month = query.month == null ? null : Number(query.month);
+    month = query.month == null ? null : Number(query.month),
+    comparisonMode = query.comparison ?? 'full';
+  assert(
+    comparisonMode === 'full' || comparisonMode === 'elapsed',
+    422,
+    'Choose full or elapsed for the comparison basis.',
+  );
   assert(
     year === null || (Number.isInteger(year) && year >= 1900 && year <= 9998),
     422,
@@ -169,14 +180,14 @@ export async function salesOverview(db, storeId, query = {}, asOf = new Date()) 
   if (level === 'years') {
     // Include the immediately preceding unavailable year, so unknown history is visible.
     for (let value = history.getUTCFullYear() - 1; value <= now.getUTCFullYear(); value++)
-      periods.push(period(level, value, 1, 1, now, history));
+      periods.push(period(level, value, 1, 1, now, history, comparisonMode));
   } else if (level === 'months') {
     for (let value = 1; value <= 12; value++)
-      periods.push(period(level, year, value, 1, now, history));
+      periods.push(period(level, year, value, 1, now, history, comparisonMode));
   } else {
     const count = new Date(Date.UTC(year, month, 0)).getUTCDate();
     for (let value = 1; value <= count; value++)
-      periods.push(period(level, year, month, value, now, history));
+      periods.push(period(level, year, month, value, now, history, comparisonMode));
   }
   const amounts = (
     await db.query(
@@ -230,8 +241,9 @@ export async function salesOverview(db, storeId, query = {}, asOf = new Date()) 
       reason = 'Only part of this period has recorded history.';
     else if (!p.comparison_available)
       reason = 'The previous period does not have complete recorded history.';
-    else if (Number(previous.net_sales) === 0)
-      reason = 'Previous period net sales are confirmed zero.';
+    else if (Number(previous.net_sales) === 0 && change.percent === null)
+      reason =
+        'Previous period net sales are confirmed zero, so a percentage cannot be calculated.';
     return {
       key: p.key,
       label: p.label,
@@ -252,7 +264,7 @@ export async function salesOverview(db, storeId, query = {}, asOf = new Date()) 
         current_to: p.comparison_end,
         previous_from: p.previous_start,
         previous_to: p.previous_end,
-        equivalent_elapsed: p.in_progress,
+        equivalent_elapsed: p.equivalent_elapsed,
         capped: p.comparison_end !== p.current_end,
       },
     };
@@ -263,12 +275,16 @@ export async function salesOverview(db, storeId, query = {}, asOf = new Date()) 
     year,
     month,
     timezone: settings.timezone,
+    comparison_mode: comparisonMode,
     reporting_started_at: settings.reporting_started_at,
     as_of: asOf.toISOString(),
     basis:
       'Gross sales are recorded item prices before discounts; prices may include tax. Net sales are completed checkout totals after discounts, including collected tax, less refunds processed in this period. Refunds follow their processing date, not the original sale date. Voided transactions are excluded.',
     comparison_basis:
-      'In-progress changes compare the same local calendar cutoff in both periods. When the preceding month is shorter, both comparison windows use its day count; February 29 uses February 28 in both years if needed. Displayed sales totals always include all activity to date.',
+      (comparisonMode === 'full'
+        ? 'Each period compares its net sales with the full preceding calendar year, month, or day. In-progress periods use current sales to date against the full previous period.'
+        : 'In-progress changes compare the same local calendar cutoff in both periods. When the preceding month is shorter, both comparison windows use its day count; February 29 uses February 28 in both years if needed. Displayed sales totals always include all activity to date.') +
+      ' Percentage change is the difference divided by the absolute previous net sales. Equal totals show 0%; a zero baseline with different totals has a direction but no percentage.',
     rows,
   };
 }

@@ -12,26 +12,36 @@ function Change({ row, currency }) {
   const previous = row.comparison.previous_net_sales;
   const explanation =
     row.comparison.reason ||
-    `${cash(row.comparison.current_net_sales, currency)} compared with ${row.comparison.period}: ${cash(previous, currency)}${row.in_progress ? ', same elapsed calendar period' : ''}.`;
+    `${cash(row.comparison.current_net_sales, currency)} compared with ${row.comparison.period}: ${cash(previous, currency)}${row.comparison.equivalent_elapsed ? ', same elapsed calendar period' : ''}.`;
+  const label = {
+    increase: 'Increased',
+    decrease: 'Decreased',
+    unchanged: 'No change',
+    unavailable: 'No comparison',
+  }[row.direction];
   return (
-    <span className={`overview-change ${row.direction}`} title={explanation}>
-      <Icon size={15} aria-hidden="true" />
-      <span>
-        {row.change_percent === null
-          ? 'N/A'
-          : `${row.change_percent > 0 ? '+' : ''}${row.change_percent.toFixed(2)}%`}
+    <>
+      <span className={`overview-change ${row.direction}`} title={explanation}>
+        {row.direction !== 'unavailable' && <Icon size={18} strokeWidth={2.5} aria-hidden="true" />}
+        <span>
+          {row.change_percent === null
+            ? previous === 0 && row.direction !== 'unavailable'
+              ? 'From zero'
+              : 'N/A'
+            : `${row.change_percent > 0 ? '+' : ''}${row.change_percent.toFixed(2)}%`}
+        </span>
       </span>
-      <span className="overview-sr-only">
-        {row.direction === 'unavailable' ? explanation : row.direction}
-      </span>
-    </span>
+      <small className="overview-change-label">{label}</small>
+    </>
   );
 }
 
 export default function SalesOverview() {
   const { data } = useStore();
   const [selection, setSelection] = useState({ year: null, month: null });
+  const [breakdown, setBreakdown] = useState(false);
   const query = new URLSearchParams();
+  query.set('comparison', 'full');
   if (selection.year !== null) query.set('year', selection.year);
   if (selection.month !== null) query.set('month', selection.month);
   const resource = useResource(`/reports/overview?${query}`);
@@ -60,6 +70,17 @@ export default function SalesOverview() {
           <RefreshCw size={16} />
           Refresh
         </Button>
+      </div>
+      <div className="overview-tools">
+        <span>Compared with the previous {level.toLowerCase()}.</span>
+        <label className="overview-breakdown-toggle">
+          <input
+            type="checkbox"
+            checked={breakdown}
+            onChange={(event) => setBreakdown(event.target.checked)}
+          />
+          Show sales breakdown
+        </label>
       </div>
       <div className="overview-navigation">
         <nav aria-label="Sales overview breadcrumbs">
@@ -104,7 +125,7 @@ export default function SalesOverview() {
         report && (
           <>
             <div
-              className="table-scroll overview-table"
+              className={`table-scroll overview-table ${breakdown ? 'with-breakdown' : 'comparison-only'}`}
               tabIndex={0}
               role="region"
               aria-label={`${level} sales records`}
@@ -113,12 +134,16 @@ export default function SalesOverview() {
                 <thead>
                   <tr>
                     <th scope="col">{level}</th>
-                    <th scope="col">Gross sales</th>
-                    <th scope="col">Discounts</th>
-                    <th scope="col">Returns / refunds</th>
                     <th scope="col">Net sales</th>
                     <th scope="col">Change</th>
-                    <th scope="col">Data coverage</th>
+                    {breakdown && (
+                      <>
+                        <th scope="col">Gross sales</th>
+                        <th scope="col">Discounts</th>
+                        <th scope="col">Returns / refunds</th>
+                        <th scope="col">Data coverage</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -126,7 +151,7 @@ export default function SalesOverview() {
                     const unavailable = ['missing', 'future'].includes(row.availability);
                     return (
                       <tr key={row.key} className={unavailable ? 'overview-unavailable' : ''}>
-                        <td>
+                        <td className="overview-period-cell">
                           {level !== 'Day' ? (
                             <button
                               className="overview-period"
@@ -134,7 +159,10 @@ export default function SalesOverview() {
                               onClick={() => setSelection({ year: row.year, month: row.month })}
                               aria-label={`View ${level === 'Year' ? 'months' : 'days'} for ${row.key}`}
                             >
-                              {row.label}
+                              <span className="overview-full-period">{row.label}</span>
+                              <span className="overview-short-period" aria-hidden="true">
+                                {level === 'Month' ? row.label.slice(0, 3) : row.label}
+                              </span>
                               <ChevronRight size={14} />
                             </button>
                           ) : (
@@ -144,17 +172,27 @@ export default function SalesOverview() {
                             <small className="overview-progress">In progress</small>
                           )}
                         </td>
-                        {['gross_sales', 'discounts', 'refunds', 'net_sales'].map((key) => (
-                          <td key={key} className={key === 'net_sales' ? 'text-strong' : ''}>
-                            {row[key] === null ? '—' : cash(row[key], currency)}
-                          </td>
-                        ))}
-                        <td>
+                        <td className="overview-net-cell text-strong">
+                          {row.net_sales === null ? '—' : cash(row.net_sales, currency)}
+                        </td>
+                        <td className="overview-change-cell">
                           <Change row={row} currency={currency} />
                           <small className="overview-comparison">
                             vs {row.comparison.period}
-                            {row.in_progress ? ' · elapsed' : ''}
+                            {row.comparison.previous_net_sales !== null && (
+                              <> · {cash(row.comparison.previous_net_sales, currency)}</>
+                            )}
+                            {row.comparison.equivalent_elapsed ? ' · elapsed' : ''}
                           </small>
+                          {!breakdown && row.direction === 'unavailable' && (
+                            <small className="overview-reason" title={row.comparison.reason}>
+                              {row.availability === 'future'
+                                ? 'Not started'
+                                : row.availability === 'partial'
+                                  ? 'Partial history'
+                                  : 'Insufficient history'}
+                            </small>
+                          )}
                           {row.comparison.capped && (
                             <small className="overview-reason">
                               Comparison ends {row.comparison.current_to.slice(0, 16)} to match the
@@ -162,22 +200,31 @@ export default function SalesOverview() {
                             </small>
                           )}
                         </td>
-                        <td>
-                          <span className={`overview-coverage ${row.availability}`}>
-                            {row.availability === 'future'
-                              ? 'Not started'
-                              : row.availability === 'missing'
-                                ? 'No recorded history'
-                                : row.availability === 'partial'
-                                  ? 'Partial history'
-                                  : row.transactions === 0 && row.refunds === 0
-                                    ? 'Confirmed zero sales'
-                                    : 'Recorded'}
-                          </span>
-                          {row.comparison.reason && (
-                            <small className="overview-reason">{row.comparison.reason}</small>
-                          )}
-                        </td>
+                        {breakdown && (
+                          <>
+                            {['gross_sales', 'discounts', 'refunds'].map((key) => (
+                              <td key={key}>
+                                {row[key] === null ? '—' : cash(row[key], currency)}
+                              </td>
+                            ))}
+                            <td>
+                              <span className={`overview-coverage ${row.availability}`}>
+                                {row.availability === 'future'
+                                  ? 'Not started'
+                                  : row.availability === 'missing'
+                                    ? 'No recorded history'
+                                    : row.availability === 'partial'
+                                      ? 'Partial history'
+                                      : row.transactions === 0 && row.refunds === 0
+                                        ? 'Confirmed zero sales'
+                                        : 'Recorded'}
+                              </span>
+                              {row.comparison.reason && (
+                                <small className="overview-reason">{row.comparison.reason}</small>
+                              )}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     );
                   })}
@@ -189,8 +236,9 @@ export default function SalesOverview() {
               <p>{report.basis}</p>
               <p>
                 {report.comparison_basis} Percentage change = (current net sales − previous net
-                sales) ÷ previous net sales × 100. A zero or unavailable previous period displays
-                N/A.
+                sales) ÷ absolute previous net sales × 100. Equal totals display — 0.00%, including
+                two confirmed zero periods. A change from zero displays an arrow and “From zero”
+                because a percentage cannot be calculated. Unavailable history displays N/A.
               </p>
               <p>
                 Timezone: <strong>{report.timezone}</strong> · Recorded history begins{' '}
