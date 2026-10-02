@@ -5,6 +5,7 @@ for (const file of [
   'browser.mjs',
   'checkout-browser.mjs',
   'pos-touch.browser.mjs',
+  'pos-viewport.browser.mjs',
   'compact-pages.browser.mjs',
   'store-operations.browser.mjs',
   'overview-browser.mjs',

@@ -744,9 +744,37 @@
     font-size: 16px;
   }
   .main-content.pos-main {
-    padding: 16px max(16px, env(safe-area-inset-right)) calc(104px + env(safe-area-inset-bottom))
+    padding: 16px max(16px, env(safe-area-inset-right))
+      calc(104px + env(safe-area-inset-bottom) + var(--pos-viewport-bottom, 0px))
       max(16px, env(safe-area-inset-left));
     background: #f5f7f5;
+  }
+  .app-shell .pos-main .modal {
+    top: var(--pos-viewport-top, 0px);
+    bottom: var(--pos-viewport-bottom, 0px);
+    max-height: calc(var(--pos-visible-height, 100dvh) - 24px);
+  }
+  .app-shell .pos-main .modal.pos-order-sheet {
+    top: auto;
+    height: auto;
+    min-height: 0;
+    max-height: min(840px, calc(var(--pos-visible-height, 100dvh) - 12px));
+  }
+  .pos-order-sheet .pos-order-content.pos-order-compact,
+  .pos-order-sheet .pos-order-compact .pos-order-lines {
+    flex: 0 1 auto;
+  }
+  .pos-main[data-pos-short-viewport] .pos-order-sheet .pos-order-content {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .pos-main[data-pos-short-viewport] .pos-order-sheet .pos-order-lines {
+    flex: none;
+    overflow-y: visible;
+  }
+  .pos-main[data-pos-short-viewport] .pos-order-sheet .pos-order-bottom {
+    position: sticky;
+    bottom: 0;
   }
   .pos-main .pos-layout.touch-pos {
     grid-template-columns: minmax(0, 1fr);
@@ -973,7 +1001,7 @@
   }
   .pos-mobile-checkout {
     position: fixed;
-    bottom: 0;
+    bottom: var(--pos-viewport-bottom, 0px);
     left: 0;
     right: 0;
     display: flex;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -36,6 +36,7 @@ import {
 } from '../lib/checkout';
 import './POS.css';
 export default function POS() {
+  const catalog = useRef(null);
   const { data, user, refresh, notify } = useStore(),
     [params] = useSearchParams(),
     [searchState, setSearchState] = useState({
@@ -82,6 +83,42 @@ export default function POS() {
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
   }, []);
+  useLayoutEffect(() => {
+    if (!mobileOrder) return;
+    const scope = catalog.current?.closest('.pos-main');
+    if (!scope) return;
+    const viewport = window.visualViewport;
+    let frame;
+    const update = () => {
+      // Browser chrome and the keyboard can obscure fixed controls without resizing the page.
+      // Leave pinch zoom to the browser so magnified content can still be panned normally.
+      if (viewport && Math.abs(viewport.scale - 1) > 0.01) return;
+      const height = viewport?.height ?? window.innerHeight;
+      const top = viewport?.offsetTop ?? 0;
+      const bottom = Math.max(0, window.innerHeight - height - top);
+      scope.style.setProperty('--pos-visible-height', `${height}px`);
+      scope.style.setProperty('--pos-viewport-top', `${top}px`);
+      scope.style.setProperty('--pos-viewport-bottom', `${bottom}px`);
+      scope.toggleAttribute('data-pos-short-viewport', height <= 520);
+    };
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    };
+    update();
+    viewport?.addEventListener('resize', schedule);
+    viewport?.addEventListener('scroll', schedule);
+    window.addEventListener('resize', schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport?.removeEventListener('resize', schedule);
+      viewport?.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+      for (const name of ['--pos-visible-height', '--pos-viewport-top', '--pos-viewport-bottom'])
+        scope.style.removeProperty(name);
+      scope.removeAttribute('data-pos-short-viewport');
+    };
+  }, [mobileOrder]);
   useEffect(() => {
     if (!mobileOrder || !orderOpen) return;
     const previous = document.body.style.overflow;
@@ -237,7 +274,7 @@ export default function POS() {
       <span className="pos-sr-only" role="status">
         {addAnnouncement}
       </span>
-      <div className="pos-layout touch-pos">
+      <div className="pos-layout touch-pos" ref={catalog}>
         <section className="product-picker">
           <div className="pos-catalog-tools">
             <div className="pos-search-row">
@@ -485,7 +522,7 @@ export default function POS() {
       {mobileOrder && orderOpen && (
         <Modal
           title="Current order"
-          subtitle={`${items.length} products · ${itemCount} items`}
+          subtitle={`${items.length} ${items.length === 1 ? 'product' : 'products'} · ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
           className="cart-panel pos-order-sheet"
           onClose={() => setOrderOpen(false)}
         >
