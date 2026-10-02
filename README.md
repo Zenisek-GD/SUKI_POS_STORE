@@ -1,280 +1,488 @@
-# Suki POS & Store Management
+﻿# Suki POS Store
 
-A working React application backed by the **Xianfires-generated backend**, with REST endpoints and PostgreSQL storage. The requested projects remain separate: `pos_backend` and `pos_frontend`.
+Suki POS Store is a web-based point-of-sale and store management system for small retail businesses. It connects checkout, inventory, purchasing, customer records, and reporting in one workspace for store owners and staff.
 
-## Run the app
+> **Database implementation note:** The current repository uses **PostgreSQL**, with **PGlite (embedded PostgreSQL)** for local development. MySQL is mentioned in the project brief, but it is not implemented in this codebase. The instructions below document the working application; using MySQL would require changes to the database adapter and SQL schema.
 
-Dependencies are already installed. From the workspace root:
+## About the Project
 
-```powershell
-npm.cmd run dev
+### Purpose
+
+Suki POS Store helps businesses organize daily operations that would otherwise be spread across handwritten logs, receipts, and separate spreadsheets. Sales connect to stock movements and transaction history, making it easier to review what was sold, monitor available inventory, and investigate discrepancies.
+
+The intended users are store owners, managers, cashiers, and inventory staff. The interface supports desktop, tablet, and mobile workflows.
+
+### Goals
+
+- Make product selection, checkout, payment recording, and receipt generation easier.
+- Maintain consistent stock records across sales, received purchases, adjustments, and returns.
+- Organize product, customer, supplier, and expense information in one place.
+- Provide sales summaries, stock alerts, and profit estimates for operational decisions.
+- Support accountability through staff permissions and activity history.
+
+## Features
+
+### Sales and Customer Service
+
+- Search products by name, SKU, product code, or barcode; support keyboard-based barcode scanning.
+- Enter quantities with numeric inputs, shortcuts, or an on-screen keypad.
+- Save favorite products, review orders, and void unpaid items or orders.
+- Select a customer or complete a walk-in purchase.
+- Apply permitted discounts, calculate tax, and record cash or configured non-cash payments.
+- Generate receipts for printing or HTML download, and export transaction records as CSV.
+- Retrieve receipts and record eligible partial or full returns within 24 hours of purchase.
+- Maintain customer details, purchase history, and optional loyalty point tracking.
+
+### Products, Inventory, and Purchasing
+
+- Manage products, categories, prices, units, barcodes, and generated product codes.
+- Archive products while preserving transaction history.
+- Review low-stock alerts and product movement history.
+- Record stock adjustments, damage, received purchases, and returns.
+- Track damaged or defective returned stock separately from sellable stock.
+- Manage suppliers, purchase orders, receiving, and purchase payment status.
+
+### Reporting and Administration
+
+- Review sales summaries with year, month, and day comparisons.
+- View sales, returns, inventory, purchasing, expense, and estimated-profit reports.
+- Record operating expenses and export report data.
+- Manage employee accounts, access roles, store settings, and discount presets.
+- Review an owner-accessible audit trail.
+
+Payments and refunds are recorded by the system; the actual money transfer occurs through the store's cash or external payment process. Quantities use whole units. Loyalty reward redemption and a branch-switching interface are not included.
+
+## Technology Stack
+
+### Frontend
+
+- **React** and **JavaScript** for application screens and interaction.
+- **HTML5** and **CSS3** for structure, styling, and responsive layouts.
+- **React Router** for navigation.
+- **Lucide React** for icons.
+- **Vite** and its React plugin for development and production builds.
+- **Fontsource DM Sans and Manrope** for locally bundled fonts.
+
+### Backend
+
+- **Xianfires / XianFire**, with the generated Express MVC structure and `.xian` view support retained.
+- **Node.js** and **Express** for the REST API.
+- **express-session** with a database session store for authentication sessions.
+- **bcrypt** for password hashing and **Zod** for input validation.
+- **Helmet** and **express-rate-limit** for HTTP protections and sign-in throttling.
+- **dotenv** for environment configuration and **hbs** for retained framework views.
+
+Sequelize remains in the framework scaffolding. The active POS services use the database adapter in `pos_backend/models/database.js`.
+
+### Database
+
+- **PostgreSQL**, connected through `pg`, for an external database server.
+- **PGlite**, through `@electric-sql/pglite`, for persistent local development without a separate server.
+- A SQL schema and migration history in `pos_backend/models/schema.sql`.
+
+MySQL is not a supported runtime for the current implementation.
+
+### Development Tools
+
+- **Git and GitHub** for version control and repository hosting.
+- **Visual Studio Code** as the development editor.
+- **npm** for dependency installation and project scripts.
+- **Playwright**, **Supertest**, and the **Node.js test runner** for verification.
+- **Prettier** and **Oxlint** for formatting and linting.
+
+## System Architecture
+
+```text
+React frontend (Vite development server, port 5173)
+                       |
+          JSON requests to /api/*
+          Session cookie + CSRF token
+                       |
+             Vite development proxy
+                       |
+Xianfires / Express backend (port 3000)
+                       |
+      Routes -> Controllers / Services
+                       |
+           models/database.js
+                       |
+          +------------+------------+
+          |                         |
+ PostgreSQL server           Local PGlite
+ DATABASE_URL set            DATABASE_URL empty
 ```
 
-Open **http://127.0.0.1:5173**. The backend runs at **http://127.0.0.1:3000**.
+React uses the shared API helper in `pos_frontend/src/lib/api.js`. The backend validates input, checks authentication and role permissions, and applies database transactions for sales, stock changes, receiving, and returns. The frontend does not connect directly to the database.
 
-Alternatively, run these in separate terminals:
+## Project Structure
 
-```powershell
-npm.cmd run backend
-npm.cmd run frontend
+```text
+SUKI_POS_STORE/
+├── pos_frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   ├── lib/
+│   │   └── pages/
+│   ├── index.html
+│   ├── package.json
+│   ├── vercel.json
+│   └── vite.config.js
+├── pos_backend/
+│   ├── bin/
+│   ├── controllers/
+│   ├── middleware/
+│   ├── models/
+│   │   ├── database.js
+│   │   ├── schema.sql
+│   │   └── seed.js
+│   ├── public/
+│   ├── routes/
+│   ├── services/
+│   ├── views/
+│   ├── .env.example
+│   ├── app.js
+│   ├── config.js
+│   ├── index.js
+│   ├── migrate.js
+│   ├── start.js
+│   ├── LICENSE-XIANFIRE
+│   └── package.json
+├── scripts/
+│   └── dev.mjs
+├── tests/
+├── .gitignore
+├── package.json
+├── package-lock.json
+├── render.yaml
+└── README.md
 ```
 
-The first development start copies `pos_backend/.env.example` to `.env`, creates the database schema, and initializes the demo store. Later starts keep your data. On Windows, `npm.cmd` works when PowerShell execution policy blocks `npm.ps1`.
+The root, frontend, and backend each have their own dependency lockfile. Generated dependencies, builds, local data, and test artifacts are excluded from version control.
 
-## Deploy: Render backend + Vercel frontend
+## System Requirements
 
-The two services deploy independently from this repository. Vercel forwards `/api/*` to Render using `pos_frontend/vercel.json`; the browser keeps using its frontend origin. This preserves the existing HttpOnly, Secure, SameSite cookies and CSRF checks. API responses are not cached. No `VITE_API_URL` or browser CORS configuration is needed. This uses [Vercel external rewrites](https://vercel.com/docs/rewrites) and its [Vite SPA fallback](https://vercel.com/docs/frameworks/frontend/vite).
+| Software        | Requirement                                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Node.js         | Version **22.12.0 or later within Node 22.x**; both application packages declare `>=22.12.0 <23`.                               |
+| npm             | Use the npm installation bundled with the supported Node.js version.                                                            |
+| Git             | Required to clone and manage the repository.                                                                                    |
+| Browser         | A modern browser for the React interface.                                                                                       |
+| Database        | PGlite is installed through npm for local use. A PostgreSQL server is required when using `DATABASE_URL`, including production. |
+| Editor          | Visual Studio Code or another editor.                                                                                           |
+| Browser testing | Installed Google Chrome on Windows, or Playwright Chromium.                                                                     |
 
-The frontend API rewrite is configured for `https://suki-pos-store-1.onrender.com`. The frontend production origin is `https://suki-store.vercel.app`; set this as `APP_ORIGIN` on Render. Changes to the rewrite take effect after the frontend is redeployed. The steps below also describe how to set up another deployment.
+The existing Xianfires backend runs on Node.js. Its required packages are installed with npm; a global framework installation is not needed to run this repository. MySQL Server is not required by the current code.
 
-### 1. Push the code and create the Vercel frontend
+## Installation and Setup
 
-Commit and push these changes to your GitHub repository, then import `Zenisek-GD/SUKI_POS_STORE` into Vercel:
+### 1. Clone the Repository
 
-| Vercel setting   | Value           |
-| ---------------- | --------------- |
-| Root Directory   | `pos_frontend`  |
-| Framework Preset | Vite            |
-| Node.js Version  | 22.x            |
-| Install Command  | `npm ci`        |
-| Build Command    | `npm run build` |
-| Output Directory | `dist`          |
-
-Deploy and copy the actual production origin, for example `https://your-pos.vercel.app`. The initial frontend will display a connection error until steps 2–4 connect its backend. Keep database credentials and session secrets on Render; Vercel does not need them.
-
-### 2. Create the PostgreSQL database
-
-In Render, create a PostgreSQL database in the same region as the backend (the Blueprint uses Singapore). Copy its **Internal Database URL** for the backend's `DATABASE_URL`. Render recommends the internal connection for services in the [same account and region](https://render.com/docs/postgresql-creating-connecting).
-
-Choose a database plan suitable for how long you need the store. Render's free PostgreSQL databases currently expire after 30 days; free web services also sleep after 15 minutes without traffic and can take time to wake. See [Render's free service limits](https://render.com/docs/free). Local PGlite files are not used in this deployment.
-
-### 3. Create the Render backend
-
-Use **New > Blueprint**, connect the same repository, and select the root `render.yaml`. It configures a free web service and generates the session secret. Enter the requested `DATABASE_URL`, `APP_ORIGIN`, and `ADMIN_PASSWORD`; the database itself is created in step 2.
-
-Alternatively, use **New > Web Service** with these settings:
-
-| Render setting    | Value                           |
-| ----------------- | ------------------------------- |
-| Runtime           | Node                            |
-| Root Directory    | `pos_backend`                   |
-| Region            | Same as the PostgreSQL database |
-| Build Command     | `npm ci --omit=dev`             |
-| Start Command     | `npm start`                     |
-| Health Check Path | `/api/health`                   |
-
-Set these environment variables on Render:
-
-| Variable         | Value                                                                           |
-| ---------------- | ------------------------------------------------------------------------------- |
-| `NODE_ENV`       | `production`                                                                    |
-| `NODE_VERSION`   | `22`                                                                            |
-| `HOST`           | `0.0.0.0`                                                                       |
-| `DEMO_MODE`      | `false`                                                                         |
-| `DATABASE_URL`   | Internal Database URL from step 2                                               |
-| `APP_ORIGIN`     | Actual Vercel production origin from step 1, e.g. `https://your-pos.vercel.app` |
-| `SESSION_SECRET` | Generated by the Blueprint, or a long random secret for manual setup            |
-| `ADMIN_EMAIL`    | `owner@suki.store`                                                              |
-| `ADMIN_NAME`     | `Gerald`                                                                        |
-| `ADMIN_PASSWORD` | Your own password, 12–72 characters                                             |
-
-For manual setup, generate a session secret locally with `node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"` and paste the result into Render. Render supplies `PORT`; the backend reads it and binds to `0.0.0.0`, as required by [Render's port binding rules](https://render.com/docs/web-services#port-binding).
-
-Startup creates the schema and initializes **one owner account in a new, empty store**. Sign in with `owner@suki.store` and the `ADMIN_PASSWORD` you chose. Demo credentials, sample products, and your local store data are not copied to this database. Configure the store name and details in Settings and add employees in Team. Existing database records are preserved on subsequent deploys; environment variables do not reset an existing account.
-
-After Render deploys, open `https://suki-pos-store-1.onrender.com/api/health`. It should return JSON with `"status":"ok"`. The bare backend URL does not host the React app in this setup.
-
-### 4. Connect the frontend to the backend
-
-The first rewrite in `pos_frontend/vercel.json` points to the current Render backend. If you create a different backend service, update this destination while preserving `/api/:path*`:
-
-```json
-"destination": "https://suki-pos-store-1.onrender.com/api/:path*"
+```bash
+git clone https://github.com/Zenisek-GD/SUKI_POS_STORE.git
+cd SUKI_POS_STORE
+npm ci
 ```
 
-Commit and push that change so Vercel redeploys. The `/api` rewrite must remain before the `/index.html` fallback. Keep `APP_ORIGIN` on Render equal to the Vercel production origin where users sign in. If you change that domain later, update the Render variable and redeploy the backend. Automatic Vercel preview domains are not authorized to write to the production API.
+Run the following setup steps from the repository root unless a command changes directories. On Windows PowerShell, use `npm.cmd` instead of `npm` if script execution policy blocks `npm.ps1`.
 
-Verify `https://your-pos.vercel.app/api/health`, then sign in, refresh a nested page such as `/products`, create a product, and sign out. If sign-in reports an origin error, check `APP_ORIGIN`; if the response is HTML or a proxy error, check the rewrite URL and Render's health endpoint. A cold free Render service may need time to wake before retrying.
+### 2. Frontend Setup
 
-## Demo accounts
+```bash
+cd pos_frontend
+npm ci
+cd ..
+```
 
-The login screen has buttons to fill these credentials. Demo users and sample records are created only in an empty database with `DEMO_MODE=true`.
+No frontend `.env` file is required for the default local setup. Vite forwards `/api` requests to `http://127.0.0.1:3000`.
 
-| Role            | Email                  | Password             |
+### 3. Backend Setup
+
+```bash
+cd pos_backend
+npm ci
+cd ..
+```
+
+For a fresh clone, copy the example configuration:
+
+```bash
+cp pos_backend/.env.example pos_backend/.env
+```
+
+`cp` also works as an alias in PowerShell. Skip this copy if you already have a configured `.env`. The backend can create the file automatically on its first development start if it is missing.
+
+Review the database and environment sections below before starting. The default example enables demo mode and uses local PGlite.
+
+### 4. Start the Application
+
+```bash
+npm run dev
+```
+
+This starts the backend and frontend together. On a new database, the backend creates the schema and initializes demo data before accepting requests.
+
+Open **http://127.0.0.1:5173**. Stop the development processes with **Ctrl+C**.
+
+## Database Setup
+
+### Option A: Local PGlite
+
+This is the default development configuration in `pos_backend/.env`:
+
+```dotenv
+DATABASE_URL=
+PGLITE_DIR=
+DEMO_MODE=true
+```
+
+No separate database service or SQL import is needed. On startup, data is stored in `pos_backend/.data/suki` and persists across restarts. `PGLITE_DIR` optionally selects another directory; relative paths resolve from the backend's working directory.
+
+Run only one backend process against a given PGlite directory. Stop that process before making a filesystem copy for backup.
+
+### Option B: PostgreSQL Server
+
+Start your PostgreSQL service and connect using an account permitted to create databases:
+
+```bash
+psql -U postgres
+```
+
+Create the database in the PostgreSQL prompt, then exit:
+
+```sql
+CREATE DATABASE pos_store;
+```
+
+```text
+\q
+```
+
+Set the connection string in `pos_backend/.env`, replacing the placeholders with your local database account:
+
+```dotenv
+DATABASE_URL=postgresql://<DB_USER>:<DB_PASSWORD>@localhost:5432/pos_store
+```
+
+URL-encode reserved characters in the username or password. The database must exist before starting the backend; the application creates its tables, not the database itself.
+
+### Migrations and Sample Data
+
+Every backend start applies `pos_backend/models/schema.sql` and then runs initialization from `pos_backend/models/seed.js`. Existing store records are preserved.
+
+To apply only the schema from the repository root:
+
+```bash
+npm --prefix pos_backend run migrate
+```
+
+Stop a backend using the same PGlite directory before running this standalone command. There is no separate npm seed command: initialization happens at backend startup.
+
+- With `DEMO_MODE=true`, an empty database receives demo accounts and sample store records.
+- With `DEMO_MODE=false`, an empty database receives one owner account using `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `ADMIN_NAME`.
+- Once a store exists, changing demo mode or administrator environment values does not reseed data or reset existing accounts.
+
+To initialize a fresh store without demonstration data, configure an empty database or a new local data directory and set:
+
+```dotenv
+DEMO_MODE=false
+ADMIN_EMAIL=owner@example.com
+ADMIN_PASSWORD=<YOUR_UNIQUE_PASSWORD>
+ADMIN_NAME=Store Owner
+```
+
+Replace the password placeholder with a unique password of 12–72 characters before startup.
+
+## Environment Variables
+
+Configuration is loaded from `pos_backend/.env`. This development example contains no live credentials:
+
+```dotenv
+NODE_ENV=development
+PORT=3000
+HOST=127.0.0.1
+APP_ORIGIN=http://127.0.0.1:5173
+SESSION_SECRET=
+DEMO_MODE=true
+DATABASE_URL=
+PGLITE_DIR=
+ADMIN_EMAIL=
+ADMIN_PASSWORD=
+ADMIN_NAME=Store Owner
+```
+
+| Variable                                      | Purpose                                                                                              |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                    | Enables production configuration checks when set to `production`.                                    |
+| `PORT`, `HOST`                                | Backend listening port and network address.                                                          |
+| `APP_ORIGIN`                                  | Expected frontend origin; use the local frontend URL during development.                             |
+| `SESSION_SECRET`                              | Session signing secret. A blank value is generated and saved automatically during local development. |
+| `DEMO_MODE`                                   | Enables demo initialization for an empty database; production requires `false`.                      |
+| `DATABASE_URL`                                | PostgreSQL connection string. Leave empty for local PGlite; required in production.                  |
+| `PGLITE_DIR`                                  | Optional local PGlite storage directory.                                                             |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | Owner details for initializing an empty store without demo data.                                     |
+
+The example file also includes `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` for retained Sequelize scaffolding. The active POS database adapter uses **`DATABASE_URL`**, so changing those individual fields does not configure the running API.
+
+Keep `.env` out of Git. For production, supply a PostgreSQL connection, a private session secret, `DEMO_MODE=false`, and an HTTPS `APP_ORIGIN` without a path or query. Use `HOST=0.0.0.0` when the hosting platform requires it.
+
+## How to Run the System
+
+### Start Both Services Together
+
+1. Start PostgreSQL if using an external database. PGlite requires no separate service.
+2. Run `npm run dev` from the repository root.
+3. Wait for the backend initialization and Vite startup messages.
+4. Open the frontend URL and sign in.
+
+### Start Services Separately
+
+In the first terminal, from the repository root:
+
+```bash
+npm run backend
+```
+
+This runs the backend's `xian` script through Nodemon. Wait for the API startup message, then use a second terminal:
+
+```bash
+npm run frontend
+```
+
+Do not run these alongside the combined `npm run dev` command.
+
+| Service                        | Default local URL                |
+| ------------------------------ | -------------------------------- |
+| React application              | http://127.0.0.1:5173            |
+| Backend API                    | http://127.0.0.1:3000/api        |
+| Health check                   | http://127.0.0.1:3000/api/health |
+| Retained XianFire welcome view | http://127.0.0.1:3000/xianfire   |
+
+The health endpoint should return JSON with `"status":"ok"`. If either port is occupied, stop the conflicting process. If you change the backend port, update the frontend proxy in `pos_frontend/vite.config.js` as well.
+
+### Build and Verify
+
+```bash
+npm run build
+npm --prefix pos_frontend run lint
+npm test
+npm run test:e2e
+```
+
+Build before browser testing. Tests use isolated databases and write artifacts to `test-results/`. If Playwright Chromium is needed, install it with:
+
+```bash
+npx playwright install chromium
+```
+
+After a build, `npm --prefix pos_backend start` starts the backend without Nodemon and serves the built frontend from `pos_frontend/dist` at the backend URL.
+
+The repository also contains Render backend configuration in `render.yaml` and Vercel frontend configuration in `pos_frontend/vercel.json`. For that deployment, use `pos_backend` and `pos_frontend` as the respective service roots, configure the backend environment variables above, and keep the frontend API rewrite aligned with the backend address. The frontend production origin must match `APP_ORIGIN`.
+
+## User Roles and Permissions
+
+| Role                          | Access and responsibilities                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| Store owner (`admin`)         | All store modules, employee management, store settings, discount presets, and audit history. |
+| Manager (`manager`)           | Sales, returns, customers, products, inventory, suppliers, purchases, expenses, and reports. |
+| Cashier (`cashier`)           | Checkout, customers, receipts, returns, and a list of their own sales.                       |
+| Inventory staff (`inventory`) | Products, categories, stock movements, suppliers, purchase orders, and receiving.            |
+
+Only owners manage employee access and store settings. The dedicated Archive action and purchase payment updates are available to owners and managers. Inventory staff can edit product availability. All roles can change their own password.
+
+Cashiers can look up another cashier's receipt within the same store to process a return. Permissions are enforced by the backend as well as the interface.
+
+## API Overview
+
+The application uses JSON REST endpoints under `/api`. React sends same-origin requests through the development proxy or deployment rewrite. Authentication uses a session cookie; authenticated write requests also require the `x-csrf-token` supplied through the authentication flow.
+
+| Module                      | Important endpoints                                                                                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Health                      | `GET /api/health`                                                                                                                                      |
+| Authentication              | `GET /api/auth/info`, `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout`, `POST /api/auth/password`                                   |
+| Initial store data          | `GET /api/bootstrap`                                                                                                                                   |
+| Sales and receipts          | `GET /api/sales`, `POST /api/sales`, `GET /api/sales/lookup`, `GET /api/sales/:id`                                                                     |
+| Returns                     | `POST /api/sales/:id/returns`                                                                                                                          |
+| Inventory                   | `GET /api/inventory/movements`, `GET /api/inventory/products/:id/movements`, `POST /api/inventory/adjust`                                              |
+| Purchasing                  | `POST /api/purchases`, `GET /api/purchases/:id/items`, `POST /api/purchases/:id/receive`, `PATCH /api/purchases/:id/payment`                           |
+| Record creation and updates | `POST /api/:entity`, `PUT /api/:entity/:id` for supported entities such as products, categories, customers, suppliers, expenses, users, and discounts. |
+| Product archival            | `DELETE /api/products/:id`                                                                                                                             |
+| Reports                     | `GET /api/reports`, `GET /api/reports/overview`                                                                                                        |
+| Administration              | `GET /api/audit`, `PUT /api/settings`                                                                                                                  |
+
+See [API routes](pos_backend/routes/api.js) and [validation schemas](pos_backend/validation.js) for accepted requests. Entity-specific permissions also apply to the shared record endpoints. Many lists arrive through `/api/bootstrap`; do not assume a separate `GET` route exists for every entity.
+
+## Database Overview
+
+The schema is defined in [schema.sql](pos_backend/models/schema.sql).
+
+| Tables                            | Purpose                                                           |
+| --------------------------------- | ----------------------------------------------------------------- |
+| `stores`, `store_settings`        | Store identity and operational settings.                          |
+| `roles`, `users`, `sessions`      | Employee roles, accounts, and authenticated sessions.             |
+| `categories`, `products`          | Product organization, pricing, identifiers, and stock counters.   |
+| `customers`, `suppliers`          | Customer and supplier records.                                    |
+| `discounts`                       | Configured discount presets.                                      |
+| `sales`, `sale_items`, `payments` | Completed sale records, purchased lines, and payment records.     |
+| `sales_returns`, `return_items`   | Returns linked to original sales, conditions, and refund amounts. |
+| `inventory_transactions`          | Stock movement history and references.                            |
+| `purchases`, `purchase_items`     | Supplier orders and ordered product lines.                        |
+| `expenses`                        | Recorded operating expenses.                                      |
+| `audit_logs`                      | Staff activity history.                                           |
+| `schema_migrations`               | Applied schema version history.                                   |
+
+Money is stored as integer minor units, such as centavos for PHP. Stock quantities are whole numbers. Transactional services keep related sale, payment, inventory, and return changes together.
+
+## Sample Accounts
+
+These public accounts are defined in the demo seed and are **for local testing or demonstration only**. They are created only when `DEMO_MODE=true` initializes an empty database. They are not production account credentials.
+
+| Role            | Email                  | Demo password        |
 | --------------- | ---------------------- | -------------------- |
 | Store owner     | `owner@suki.store`     | `SukiOwner2026!`     |
 | Manager         | `manager@suki.store`   | `SukiManager2026!`   |
 | Cashier         | `cashier@suki.store`   | `SukiCashier2026!`   |
 | Inventory staff | `inventory@suki.store` | `SukiInventory2026!` |
 
-## Included features
+The demo login screen includes buttons to fill these details. A store initialized with `DEMO_MODE=false` uses the owner account configured during its first startup instead.
 
-- **Checkout:** enter quantity before scanning or choosing a product; Find Product search by name, SKU, internal code, or barcode; favorites; pre-checkout item/order voids; customer selection or walk-in; authorized discounts; inclusive/exclusive tax; cash received and change; configurable recorded payment methods; retry-safe checkout.
-- **Receipts:** store details, cashier, customer, product lines, discounts, tax, payment, change, and footer. Print through the browser (including Save as PDF) or download an HTML receipt. Store details are captured with the sale, so old receipts retain the original information.
-- **Products and categories:** create/edit products and categories, unique SKU/barcode, generated internal product codes, supplier linkage, product symbols or image URLs, costs, selling prices, stock minimums, units, and archival with history retained.
-- **Inventory:** stock-in/out, adjustments, damage, purchase receiving, and linked returns; low/out-of-stock alerts; product movement dialogs with running balances, date/type filters, server pagination, references, reasons, and operators. Non-sellable stock is tracked separately.
-- **Transactions and returns:** search, status/payment/date filters, CSV export, receipt lookup, and partial returns within 24 hours. Original sales remain unchanged; linked return records capture quantities, conditions, reasons, refunds, and operators. Owners configure eligible conditions.
-- **Purchasing:** supplier records, multi-item orders, payment/receiving statuses, order detail, and transactional receiving that increments stock once and updates product costs.
-- **Customers:** contact records, purchase history, optional loyalty points, and purchases without registration.
-- **Expenses:** categorized expense entry/editing and inclusion in profit estimates.
-- **Dashboard and reports:** year-to-month-to-day sales tables with calendar-period comparisons, gross sales, discounts, refunds, and net sales; current-day metrics, sales/category charts, best sellers, payment distribution, transaction/return/product/category/cashier reports, inventory, movements, purchasing, expenses, and profit. Date filters and CSV exports are included.
-- **Administration:** employee accounts, four enforced roles, account activation, password changes, store/tax/payment/receipt settings, discount presets, and a read-only audit trail.
-- **Responsive interface:** compact headers, independently scrolling desktop tables, and phone record cards with key fields, visible actions, and expandable details. Phones and tablets use a navigation drawer with keyboard focus handling. Touch controls, numeric keyboards, labeled purchase lines, and a landscape-ready order sheet keep checkout and forms usable on small screens. Reports show records before charts; settings and role descriptions expand when needed. Fonts are bundled locally.
+## Guidelines for Use
 
-## Using the new store workflows
+1. Use your assigned account and review product prices, units, stock, and store settings before processing sales.
+2. Enter positive whole-number quantities and check the complete order before selecting **Charge**. On mobile, use **View order** to review the basket.
+3. Confirm receipt of payment through the store's cash or payment channel before completing a sale.
+4. Correct unpaid orders with void actions. For completed sales, locate the original receipt and follow the return workflow and enabled conditions within the 24-hour window.
+5. Record stock changes and expenses promptly, provide adjustment reasons, and compare recorded quantities with physical stock.
+6. Review the selected reporting dates and treat profit figures as estimates based on recorded information.
+7. Sign out after using shared devices and report record or access issues to the store owner.
 
-### Quantity, product search, and voids
+## Screenshots
 
-On Point of sale, enter a positive whole-number quantity, then scan once, enter a barcode/internal code manually, or use **Find Product**. The requested quantity is added to the existing cart line and resets to 1 only after success. Unknown codes and insufficient stock keep your entered quantity so you can retry. Stock is checked again during checkout. Products receive a unique internal code automatically, including products without barcodes; find it in Products or Find Product.
+Add screenshots of the following screens when preparing the repository for presentation. No application screenshots are currently tracked in Git; the placeholders below intentionally avoid broken image links.
 
-Star products for quick selection in Favorites. Favorites are saved on this browser separately for each user and store. **Void item** and **Void order** remove uncompleted cart entries. Completed sales use the return workflow below.
+| Screen          | Suggested screenshot                                 | Status      |
+| --------------- | ---------------------------------------------------- | ----------- |
+| Login           | Sign-in screen and demonstration role choices.       | To be added |
+| Dashboard       | Sales summary and calendar sales overview.           | To be added |
+| User management | Team members and role assignment.                    | To be added |
+| Point of sale   | Product catalog, current order, and mobile checkout. | To be added |
+| Inventory       | Stock list and product movement history.             | To be added |
+| Reports         | Report filters, summary, and results.                | To be added |
 
-For touchscreens, use the **1 / 2 / 5 / 10** quantity shortcuts or **Keypad** to enter a quantity with large number buttons. The first digit replaces the existing quantity; Clear and Backspace let you correct it. Each current-order item also has a Keypad action for changing its total quantity within available stock. Keyboard entry and barcode scanning remain available.
+Browser tests generate local screenshots in the ignored `test-results/` directory. Review screenshots for private data before adding selected images to version control, then replace the relevant placeholder with a relative Markdown image link.
 
-On desktop, a compact search and quantity toolbar leaves more room for the product catalog and order items. Both lists scroll separately while the total and Charge button stay visible. Expand **Order details** for the subtotal and tax breakdown, or **Discount** to change the order discount. On mobile and smaller tablets, **View order** opens the order panel; **Continue shopping** closes it while keeping the cart. Quantity, customer, and discount selections persist when switching between these layouts.
+## Developers / Contributors
 
-### Customer returns
+- **Gerald De Palubos / Zenisek-GD** — project contributor names recorded in the repository's Git history.
+- **Christian I. Cabrera** — XianFire framework author credited in the retained backend license.
 
-1. Open **Transactions → Find sale for return**, and enter the original receipt number. A transaction row also has a Return action.
-2. Review the original purchase timestamp, paid amounts, previous returns, and return deadline. Enter the quantities to return, choose the inspected condition for each item, and provide a reason.
-3. Confirm the condition assessment and select **Record return**. The API rejects expired returns, ineligible conditions, and quantities exceeding the unreturned purchased units.
+## Academic Purpose
 
-The return window is 24 hours from purchase. In **Settings → Product return policy**, the owner can enable or disable unused/unopened/intact, damaged, and defective conditions. Ordinary accepted returns restore available stock. Damaged and defective returns increase non-sellable stock without adding units available for checkout.
+This project supports academic work in **ITE 413 — Integrative Programming and Technologies 2**. It demonstrates frontend and backend integration, REST API communication, database transactions, authentication, role permissions, and responsive interface development through a retail management application.
 
-Refunds use the original paid amount after discounts and applicable tax. Partial returns allocate rounding across units so returning all units refunds exactly the original payment. Retrying an uncertain request reuses its return key, preventing duplicate refunds and stock changes. The original receipt remains intact and shows its linked returns. Issue the money through the store's payment process; this app records the refund but does not transfer funds.
+## License
 
-### Product stock history
+XianFire-derived backend code includes an **MIT license** and attribution in [pos_backend/LICENSE-XIANFIRE](pos_backend/LICENSE-XIANFIRE).
 
-Click a product row in **Inventory** to open its movement history. It shows opening stock, sales, receiving, returns, damage, and manual adjustments, with quantity in/out, balance after each movement, reference, operator, and reason. Filter by date or type and use the paging controls. Balances retain all earlier movements even when those entries are filtered out. Rows show the latest recorded movement first; a database sequence preserves stock mutation order when timestamps overlap. Manual adjustments require a reason.
-
-### Calendar sales overview
-
-In **Overview** or **Reports**, click a year to view months, then a month to view days. Use the breadcrumbs or Back control to navigate. Changes compare net sales with the full immediately preceding calendar year, month, or day, including across year/month boundaries. For example, ₱900,000 in 2025 is the base for ₱780,000 in 2026: **↓ −13.33% Decreased**. Higher totals show a green **↑**, and equal totals show **— 0.00% No change**. The period, net sales, change, and previous base amount stay visible in the compact view. Enable **Show sales breakdown** for gross sales, discounts, refunds, and data coverage.
-
-Gross sales use original item prices before discounts; net sales use completed checkout totals, including collected tax, minus linked refunds processed during the selected period. Refunds follow their processing date in the configured store timezone. Voided transactions are excluded. A period may therefore have negative net sales when refunds exceed sales.
-
-Recorded history begins at the store's creation timestamp. Earlier periods display missing history, periods crossing that timestamp display partial history, and known periods without transactions display confirmed zero sales. Unavailable comparisons show **N/A**. Two confirmed zero periods show **— 0.00%**; a change from zero shows an arrow and **From zero**, since no percentage can be calculated. Percentage change uses `(current − previous) ÷ abs(previous) × 100`, so refund-only negative baselines keep the correct direction. In-progress periods are labeled and compare current sales to date with the full previous period. The API also supports `comparison=elapsed` to compare matching local calendar cutoffs, including shorter-month and leap-day handling; the calendar UI uses `comparison=full`.
-
-## Role access
-
-| Module                                     | Owner | Manager | Cashier | Inventory |
-| ------------------------------------------ | :---: | :-----: | :-----: | :-------: |
-| Dashboard, reports, expenses               |   ✓   |    ✓    |         |           |
-| POS and receipts                           |   ✓   |    ✓    |    ✓    |           |
-| Sales history                              |  All  |   All   |   Own   |           |
-| Receipt lookup and product returns         |   ✓   |    ✓    |    ✓    |           |
-| Customers                                  |   ✓   |    ✓    |    ✓    |           |
-| Products, inventory, suppliers, purchasing |   ✓   |    ✓    |         |     ✓     |
-| Archive products, update purchase payment  |   ✓   |    ✓    |         |           |
-| Team, settings, discounts, audit           |   ✓   |         |         |           |
-| Own password                               |   ✓   |    ✓    |    ✓    |     ✓     |
-
-Cashier API responses omit product costs and administrative data. Cashiers see their own sales list but can look up another cashier's receipt within the same store to process a return. Authorization is enforced by the backend, independently of navigation visibility.
-
-## PostgreSQL configuration
-
-### Local development
-
-With `DATABASE_URL` empty, the app uses **PGlite**, an embedded PostgreSQL engine. Data persists in `pos_backend/.data/suki`. This makes the complete application runnable without a separately installed server. It is a development option; production startup requires a PostgreSQL server connection.
-
-### PostgreSQL server
-
-Create a PostgreSQL database, then set `pos_backend/.env`:
-
-```dotenv
-DATABASE_URL=postgresql://postgres:your-password@localhost:5432/pos_store
-DEMO_MODE=false
-ADMIN_EMAIL=owner@suki.store
-ADMIN_PASSWORD=your-unique-password-at-least-12-characters
-SESSION_SECRET=your-long-random-session-secret
-```
-
-On an empty database, the application initializes a store and the specified owner. Using an existing database preserves its accounts and records; changing environment credentials does not reset an existing owner. To start a fresh local store, point `PGLITE_DIR` to a new directory and set `DEMO_MODE=false` with the admin credentials.
-
-Apply the schema independently with:
-
-```powershell
-npm.cmd --prefix pos_backend run migrate
-```
-
-The SQL migration creates missing objects without dropping existing data. `DATABASE_URL` selects the live application's external database. The generated Sequelize `models/db.js` and code generators remain available for extending Xianfires; application repositories in `models/database.js` use parameterized PostgreSQL SQL.
-
-### Upgrade an existing deployment
-
-This update adds schema migration **2** in `pos_backend/models/schema.sql`: generated product codes, non-sellable stock counters, stock movement sequences, owner return conditions, and the `sales_returns`/`return_items` tables. Existing products receive their codes automatically. Existing sales, inventory quantities, and movement records are preserved. Reapplying the migration is safe; historical completed-sale cancellations remain in history, while the old cancellation API now directs operators to returns.
-
-Deploy the backend on Render first. Its normal `npm start` runs the additive migration before accepting requests, using the existing `DATABASE_URL`. You can also run `npm run migrate` from the backend directory in the configured server environment. Check `/api/health`, then deploy the frontend on Vercel. No database reset or new environment variable is required. These changes have been tested against isolated databases; the live deployment has not been modified here.
-
-For deployment, build the frontend and start the backend:
-
-```powershell
-npm.cmd run build
-npm.cmd --prefix pos_backend start
-```
-
-The backend serves `pos_frontend/dist`. Production requires `NODE_ENV=production`, `DEMO_MODE=false`, `DATABASE_URL`, `SESSION_SECRET`, and an HTTPS `APP_ORIGIN`; configure the host and an HTTPS reverse proxy for the deployment environment. Sessions are stored in the database, expire after 12 hours, and use HttpOnly/SameSite cookies (Secure in production).
-
-## Data and transaction design
-
-```text
-pos_backend/
-  index.js, start.js         Xianfires entry and startup
-  app.js                    Express, .xian engine, sessions, security, static React
-  routes/api.js             REST routes and role guards
-  controllers/              Authentication, records, reports
-  services/                 Atomic sales, returns, stock changes, receiving, sales overview
-  models/schema.sql         PostgreSQL tables, constraints, indexes, migration record
-  models/database.js        PostgreSQL/PGlite connection and transaction adapter
-  models/seed.js             Empty-store initialization and optional demo data
-  middleware/               Authentication, role guards, persistent session store
-  bin/, create.js, views/    Retained Xianfires generator and .xian templates
-pos_frontend/
-  src/pages/                Store application screens
-  src/components/           Layout, forms, dialogs, tables, receipts
-  src/lib/                  API, session/store context, fetching, CSV and formatting
-tests/
-  api.test.js               Financial, stock, permission, and session integration tests
-  returns.test.js            Return validation, retry/concurrency, stock, migration tests
-  overview.test.js           Calendar comparisons, timezone and refund reporting tests
-  checkout.test.js           Quantity validation and exact product-code lookup
-  run-browser.mjs            Isolated browser workflows and responsive-layout checks
-```
-
-- Money is stored and sent by the API as integer minor units (centavos for PHP). Quantities are whole units. Use prepackaged products for fractional weights in this version.
-- Store-scoped foreign keys and queries prepare the data model for multiple branches. This version exposes a single store per user and does not include a branch-switching interface.
-- Checkout uses server prices, sorted product row locks, and an idempotency key. A failed checkout rolls back the sale, payments, stock movements, points, and audit record together.
-- Receiving and returns lock their parent records to prevent repeated stock changes. Return records, refund amounts, stock movements, loyalty reversals, and audit entries commit in one transaction. Products are archived rather than deleted, preserving history.
-- Expense-adjusted profit is `net sales − net tax − net sold-item cost − expenses`. Refunds reverse revenue and tax on their processing date; only sellable returns reverse the original sold-item cost. Costs are snapshotted when selling; this version uses the product's current cost, updated on receipt, rather than FIFO or weighted-average accounting.
-- Category/product net sales exclude tax and use the same exact proportional discount/tax allocation as returns, including residual cents. The calendar overview's net sales include collected tax, as labeled in the table.
-- Most record screens show the most recent 1,000 rows with client-side paging. Financial report exports include all matching rows within a date range of up to one year. Inventory reports are current snapshots.
-- GCash, Maya, bank transfer, and custom methods **record payments received separately**; they do not initiate or verify payment-provider transfers. Customer returns similarly record refunds; the actual money transfer is handled outside the app.
-- Product/store images currently use URLs. Loyalty points are earned and tracked; reward redemption is not included.
-
-## Verification
-
-```powershell
-npm.cmd run build
-npm.cmd --prefix pos_frontend run lint
-npm.cmd test
-npm.cmd run test:e2e
-```
-
-API and browser tests use fresh, in-memory PostgreSQL databases; they do not change your store data. Browser tests use installed Chrome on Windows, or Playwright's Chromium on other systems. If needed, install the latter using `npx playwright install chromium`. Screenshots and downloaded test artifacts are written under `test-results`.
-
-The API suite covers permissions, CSRF/origin checks, validation, duplicate products, concurrent stock competition, checkout/return retries, return expiry and conditions, partial refunds, sellable/non-sellable stock, receiving, movement balances/filtering/pagination, cross-store isolation, schema upgrades, tax/discount allocation, calendar boundaries, timezone handling, account deactivation, and session invalidation. Browser suites cover quantity-five scanning and manual selection, favorites, voids, return lookup and submission, owner conditions, stock history, sales drill-down, CSV exports, and mobile layouts.
-
-## Install on another machine
-
-Node.js 22.12 or newer is recommended for the current Vite release.
-
-```powershell
-npm.cmd ci
-npm.cmd --prefix pos_backend ci
-npm.cmd --prefix pos_frontend ci
-```
-
-For backups, use your PostgreSQL server's backup tooling. For local PGlite data, shut down the backend before copying its `.data/suki` directory. Do not run multiple backend processes against the same PGlite directory.
-
-## Xianfires attribution
-
-`pos_backend` was generated with the installed **Xianfires 2.0.9** generator before adding application features. Its Express MVC structure, `.xian` view support, `express-session` authentication approach, and CLI scaffolding remain in place. The original license is preserved in `pos_backend/LICENSE-XIANFIRE` and generated source files. The original welcome view remains at `/xianfire`.
+No separate repository-wide license is currently included. The framework license should not be treated as a license declaration for all original Suki POS Store code.
